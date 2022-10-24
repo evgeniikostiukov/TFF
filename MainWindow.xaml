@@ -4,9 +4,115 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:tff.main"
+        xmlns:models="clr-namespace:tff.main.Models"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="MainWindow" MaxWidth="700" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight" WindowStyle="ThreeDBorderWindow">
+    <Window.Resources>
+        <models:EntryArgs x:Key="EntryArgs" TargetFile="aaa.ttt"></models:EntryArgs>
+        <models:ResultFile x:Key="ResultFile"></models:ResultFile>
+        <!--<Style x:Key="TextBlockDefault">
+            <Style.Setters>
+                <Setter Property="MinWidth" Value="300px"></Setter>
+                <Setter Property="Height" Value="70px"></Setter>
+                <Setter Property="VerticalAlignment" Value="Center"></Setter>
+            </Style.Setters>
+        </Style>
+        <Style x:Key="TextBlockGray" BasedOn="TextBlockDefault">
+            <Style.Setters>
+                <Setter Property="Background" Value="#E4E4E4"></Setter>
+            </Style.Setters>
+        </Style>-->
+        <StackPanel x:Key="InputStackPanel" x:Shared="False" Orientation="Horizontal">
+            <TextBlock Background="#E4E4E4" MinWidth="300px" Height="70px" VerticalAlignment="Center"></TextBlock>
+            <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
 
-    </Grid>
+                <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" Width="85" Height="70"
+                   HorizontalAlignment="Right" />
+            </Border>
+        </StackPanel>
+    </Window.Resources>
+    <StackPanel>
+        <Grid ShowGridLines="True" UseLayoutRounding="True" DataContext="{StaticResource EntryArgs}">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition></RowDefinition>
+                <RowDefinition></RowDefinition>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="0.7*" MaxWidth="300px"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
+                       HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                       Text="Выберите файл для обработки" />
+            </Border>
+            <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4" MaxWidth="300px">
+                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
+                       HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                       Text="Укажите путь к папке с эталонными запросами и ответами" />
+            </Border>
+            <Border Grid.Row="2" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
+                       HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                       Text="Укажите путь к папке с тестовыми сценариями" />
+            </Border>
+            <Border Grid.Row="3" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center" TextWrapping="WrapWithOverflow"
+                       Text="Укажите путь сохранения файла" />
+            </Border>
+
+
+            <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <StackPanel Orientation="Horizontal" >
+                    <TextBlock Name="SelectTargetFileText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding TargetFile, Mode=TwoWay}" />
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+
+                        <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0">
+                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75" Stretch="Fill"  />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectEtalonFolderText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding EtalonFolder, Mode=TwoWay}"></TextBlock>
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+
+                        <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0">
+                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
+                   HorizontalAlignment="Right" Stretch="Fill"  />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectTestFolderText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding TestFolder, Mode=TwoWay}"></TextBlock>
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+
+                        <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0">
+                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
+                   HorizontalAlignment="Right" Stretch="Fill"  />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <Border Grid.Row="3" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectSavePathText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding SavePath, Mode=TwoWay}"></TextBlock>
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+
+                        <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0">
+                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="73"
+                   HorizontalAlignment="Right" Stretch="Fill"  />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Button  Content="Начать" HorizontalContentAlignment="Center" HorizontalAlignment="Right" Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Center" FontSize="18"/>
+    </StackPanel>
 </Window>
