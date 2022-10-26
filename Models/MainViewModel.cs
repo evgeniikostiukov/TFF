@@ -12,11 +12,11 @@ namespace tff.main.Models;
 
 internal class MainViewModel : INotifyPropertyChanged
 {
-    private SelectFileCommand? _selectFileCommand;
+    private SelectFileCommand _selectFileCommand;
 
-    private SelectFolderCommand? _selectFolderCommand;
+    private SelectFolderCommand _selectFolderCommand;
 
-    private StartCommand? _startCommand;
+    private StartCommand _startCommand;
 
     private StopCommand _stopCommand;
 
@@ -107,7 +107,7 @@ internal class MainViewModel : INotifyPropertyChanged
         get { return _stopCommand ??= new StopCommand(_ => { DocProcessHandler.worker_Stop(); }); }
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public event PropertyChangedEventHandler PropertyChanged;
 
     public void OnPropertyChanged([CallerMemberName] string prop = "")
     {

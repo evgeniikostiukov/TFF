@@ -14,30 +14,30 @@ using Range = Microsoft.Office.Interop.Word.Range;
 
 namespace tff.main.Handlers;
 
-public class DocProcessHandler
+public static class DocProcessHandler
 {
-    private static BackgroundWorker? _worker;
-    private static Entry? _entry;
+    private static BackgroundWorker _worker;
+    private static Entry _entry;
 
     public static bool Execute(Entry entry)
     {
         InitWorker(entry);
-        _worker?.RunWorkerAsync();
+        _worker.RunWorkerAsync();
 
         return true;
     }
 
     private static void ExecuteInternal()
     {
-        var result = new ResultFile();
-        var fileInfo = new FileInfo(_entry.TargetFile);
-        var newFilePath = $"{_entry.SavePath}\\{fileInfo.Name.Split(".")[0]}_test.{fileInfo.Extension}";
         var application = new Application();
-        Document? newDoc = null;
-        var currentStep = 0;
+        Document newDoc = null;
 
         try
         {
+            var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
+            var newFilePath = $"{_entry.SavePath}\\{fileInfo.Name.Split(".")[0]}_test.{fileInfo.Extension}";
+            var currentStep = 0;
+
             if (fileInfo.Exists)
             {
                 fileInfo.CopyTo(newFilePath, true);
@@ -117,63 +117,65 @@ public class DocProcessHandler
                                    ProcessType processType,
                                    ref int currentStep)
     {
-        if (matches.Count > 0)
+        if (matches.Count <= 0)
         {
-            foreach (Match match in matches)
+            return;
+        }
+
+        foreach (Match match in matches)
+        {
+            ++currentStep;
+
+            var stringBuilder = new StringBuilder();
+
+            var requestNumber = match.Value.Split("/")[1];
+            var currentRange = wordRange.Duplicate;
+
+            var xmlDocument = new XmlDocument();
+            var xmlPath = GetXmlPath(requestNumber, processType);
+            xmlDocument.Load(xmlPath);
+            var element = XElement.Parse(xmlDocument.OuterXml);
+
+            var settings = new XmlWriterSettings
+            {
+                OmitXmlDeclaration = true,
+                Indent = true,
+                NewLineOnAttributes = false,
+            };
+
+            using (var xmlWriter = XmlWriter.Create(stringBuilder, settings))
+            {
+                element.Save(xmlWriter);
+            }
+
+            var findObj = currentRange.Find;
+            findObj.ClearFormatting();
+            findObj.Text = match.Value;
+            findObj.Execute();
+            currentRange.Text = stringBuilder.ToString();
+            currentRange.Paragraphs.LineSpacingRule = WdLineSpacing.wdLineSpaceSingle;
+            currentRange.Paragraphs.LineUnitAfter = 0;
+            currentRange.Paragraphs.SpaceAfter = 0;
+            currentRange.Paragraphs.SpaceAfterAuto = 0;
+
+            var progress = GetPercent(currentStep);
+            _worker.ReportProgress(progress);
+
+            var tags = tagPattern.Matches(currentRange.Text);
+
+            foreach (Match tag in tags)
             {
                 ++currentStep;
+                var tagRange = currentRange.Duplicate;
+                tagRange.Start = tag.Index - 1;
+                var tagFind = tagRange.Find;
+                tagFind.ClearFormatting();
+                tagFind.Text = tag.Value;
+                tagFind.Execute();
+                tagRange.Font.Color = WdColor.wdColorLightBlue;
 
-                var stringBuilder = new StringBuilder();
-
-                var requestNumber = match.Value.Split("/")[1];
-                var currentRange = wordRange.Duplicate;
-
-                var xmlDocument = new XmlDocument();
-                var xmlPath = GetXmlPath(requestNumber, processType);
-                xmlDocument.Load(xmlPath);
-                var element = XElement.Parse(xmlDocument.OuterXml);
-
-                var settings = new XmlWriterSettings
-                {
-                    OmitXmlDeclaration = true,
-                    Indent = true,
-                    NewLineOnAttributes = false,
-                };
-
-                using (var xmlWriter = XmlWriter.Create(stringBuilder, settings))
-                {
-                    element.Save(xmlWriter);
-                }
-
-                var findObj = currentRange.Find;
-                findObj.ClearFormatting();
-                findObj.Text = match.Value;
-                findObj.Execute();
-                currentRange.Text = stringBuilder.ToString();
-                currentRange.Paragraphs.LineSpacingRule = WdLineSpacing.wdLineSpaceSingle;
-                currentRange.Paragraphs.LineUnitAfter = 0;
-                currentRange.Paragraphs.SpaceAfter = 0;
-                currentRange.Paragraphs.SpaceAfterAuto = 0;
-
-                var progress = GetPercent(currentStep);
+                progress = GetPercent(currentStep);
                 _worker.ReportProgress(progress);
-
-                var tags = tagPattern.Matches(currentRange.Text);
-
-                foreach (Match tag in tags)
-                {
-                    ++currentStep;
-                    var tagRange = currentRange.Duplicate;
-                    tagRange.Start = tag.Index - 1;
-                    var tagFind = tagRange.Find;
-                    tagFind.ClearFormatting();
-                    tagFind.Text = tag.Value;
-                    tagFind.Execute();
-                    tagRange.Font.Color = WdColor.wdColorLightBlue;
-
-                    progress = GetPercent(currentStep);
-                    _worker.ReportProgress(progress);
-                }
             }
         }
     }
@@ -201,7 +203,7 @@ public class DocProcessHandler
         _entry = entry;
     }
 
-    private static void _worker_RunWorkerCompleted(object? sender, RunWorkerCompletedEventArgs e)
+    private static void _worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
     {
         if (_entry != null)
         {
@@ -221,11 +223,13 @@ public class DocProcessHandler
 
     private static void worker_DoWork(object sender, DoWorkEventArgs e)
     {
-        if (_entry != null)
+        if (_entry == null)
         {
-            _entry.StartVisible = Visibility.Collapsed;
-            ExecuteInternal();
+            return;
         }
+
+        _entry.StartVisible = Visibility.Collapsed;
+        ExecuteInternal();
     }
 
     private static void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -238,9 +242,9 @@ public class DocProcessHandler
 
     public static void worker_Stop()
     {
-        if (_worker != null && _worker.WorkerSupportsCancellation && !_worker.CancellationPending)
+        if (_worker is {WorkerSupportsCancellation: true, CancellationPending: false,})
         {
-            _worker?.CancelAsync();
+            _worker.CancelAsync();
         }
     }
 
