@@ -1,0 +1,6 @@
+/.idea
+/.vs
+bin
+obj
+/tff.main.csproj.user
+/tff.sln.DotSettings.user

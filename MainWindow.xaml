@@ -4,35 +4,11 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:tff.main"
-        xmlns:models="clr-namespace:tff.main.Models"
+        xmlns:models="clr-namespace:tff.main.Models" d:DataContext="{d:DesignInstance Type=models:MainViewModel}"
         mc:Ignorable="d"
-        Title="MainWindow" MaxWidth="700" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight" WindowStyle="ThreeDBorderWindow">
-    <Window.Resources>
-        <models:EntryArgs x:Key="EntryArgs" TargetFile="aaa.ttt"></models:EntryArgs>
-        <models:ResultFile x:Key="ResultFile"></models:ResultFile>
-        <!--<Style x:Key="TextBlockDefault">
-            <Style.Setters>
-                <Setter Property="MinWidth" Value="300px"></Setter>
-                <Setter Property="Height" Value="70px"></Setter>
-                <Setter Property="VerticalAlignment" Value="Center"></Setter>
-            </Style.Setters>
-        </Style>
-        <Style x:Key="TextBlockGray" BasedOn="TextBlockDefault">
-            <Style.Setters>
-                <Setter Property="Background" Value="#E4E4E4"></Setter>
-            </Style.Setters>
-        </Style>-->
-        <StackPanel x:Key="InputStackPanel" x:Shared="False" Orientation="Horizontal">
-            <TextBlock Background="#E4E4E4" MinWidth="300px" Height="70px" VerticalAlignment="Center"></TextBlock>
-            <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
-
-                <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" Width="85" Height="70"
-                   HorizontalAlignment="Right" />
-            </Border>
-        </StackPanel>
-    </Window.Resources>
-    <StackPanel>
-        <Grid ShowGridLines="True" UseLayoutRounding="True" DataContext="{StaticResource EntryArgs}">
+        Title="ТФФ Builder" MaxWidth="1000" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight" WindowStyle="ThreeDBorderWindow">
+    <StackPanel Margin="8">
+        <Grid UseLayoutRounding="True">
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition></RowDefinition>
@@ -66,10 +42,10 @@
 
             <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal" >
-                    <TextBlock Name="SelectTargetFileText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding TargetFile, Mode=TwoWay}" />
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+                    <TextBlock Name="SelectTargetFileText" Background="#E4E4E4" FontSize="14" MinWidth="300px" MaxWidth="300px" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}" Text="{Binding TargetFile,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0">
+                        <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0" Command="{Binding SelectFileCommand}" CommandParameter="TargetFile" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75" Stretch="Fill"  />
                         </Button>
                     </Border>
@@ -77,10 +53,10 @@
             </Border>
             <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectEtalonFolderText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding EtalonFolder, Mode=TwoWay}"></TextBlock>
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+                    <TextBlock Name="SelectEtalonFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px" MaxWidth="300px" HorizontalAlignment="Stretch" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow"  DataContext="{Binding EntryEntity}" Text="{Binding EtalonFolder,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True"></TextBlock>
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0">
+                        <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0" Command="{Binding SelectFolderCommand}" CommandParameter="EtalonFolder" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
                    HorizontalAlignment="Right" Stretch="Fill"  />
                         </Button>
@@ -90,10 +66,10 @@
 
             <Border Grid.Row="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectTestFolderText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding TestFolder, Mode=TwoWay}"></TextBlock>
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+                    <TextBlock Name="SelectTestFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px" HorizontalAlignment="Stretch" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}" Text="{Binding TestFolder,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True"></TextBlock>
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0">
+                        <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right" Command="{Binding SelectFolderCommand}" CommandParameter="TestFolder" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
                    HorizontalAlignment="Right" Stretch="Fill"  />
                         </Button>
@@ -102,10 +78,10 @@
             </Border>
             <Border Grid.Row="3" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectSavePathText" Background="#E4E4E4" MinWidth="300px" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" Text="{Binding SavePath, Mode=TwoWay}"></TextBlock>
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Red">
+                    <TextBlock Name="SelectSavePathText" Background="#E4E4E4" FontSize="14" MinWidth="300px" MaxWidth="300px" Height="70px" MaxHeight="120" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}" Text="{Binding SavePath,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True"></TextBlock>
+                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0">
+                        <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right" Command="{Binding SelectFolderCommand}" CommandParameter="SavePath" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="73"
                    HorizontalAlignment="Right" Stretch="Fill"  />
                         </Button>
@@ -113,6 +89,27 @@
                 </StackPanel>
             </Border>
         </Grid>
-        <Button  Content="Начать" HorizontalContentAlignment="Center" HorizontalAlignment="Right" Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Center" FontSize="18"/>
+
+        <Grid Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="0.13*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="0" Grid.Column="0">
+                <ProgressBar Name="pbStatus" DataContext="{Binding EntryEntity}" Minimum="0" Maximum="100" HorizontalAlignment="Stretch" Margin="7"  Value="{Binding Progress, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Text>
+                        <MultiBinding StringFormat="{}{0}/{1}%">
+                            <Binding Path="Value" ElementName="pbStatus" />
+                            <Binding Path="Maximum" ElementName="pbStatus" />
+                        </MultiBinding>
+                    </TextBlock.Text>
+                </TextBlock>
+            </Grid>
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                <Button Content="Отменить"  HorizontalContentAlignment="Center" HorizontalAlignment="Right" Padding="5,5,5,5" Margin="0,7,5,5"  VerticalAlignment="Top" FontSize="18" Command="{Binding StopCommand}" Visibility="{Binding Path=EntryEntity.StopVisible, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" />
+                <Button Content="Начать" HorizontalContentAlignment="Center" HorizontalAlignment="Right" Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Top" FontSize="18" Command="{Binding StartCommand}" Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand"/>
+            </StackPanel>
+        </Grid>
     </StackPanel>
 </Window>
