@@ -1,136 +1,109 @@
 ﻿using System.ComponentModel;
-using System.Windows;
 using System.Runtime.CompilerServices;
+using System.Windows;
+
 namespace tff.main.Models;
 
 public class Entry : INotifyPropertyChanged
 {
-    private string _targetFile;
     private string _etalonFolder;
-    private string _testFolder;
-    private string _savePath;
     private int _progress;
+    private string _savePath;
     private Visibility _startEnabled;
+    private string _targetFile;
+    private string _testFolder;
     private int _totalCount;
 
-
     /// <summary>
-    /// Файл для обработки
+    ///     Файл для обработки
     /// </summary>
     public string TargetFile
     {
-        get
-        {
-            return _targetFile;
-        }
+        get => _targetFile;
         set
         {
             _targetFile = value;
-            OnPropertyChanged("TargetFile");
+            OnPropertyChanged();
         }
     }
 
     /// <summary>
-    /// Путь к папке с эталонными запросами и ответами
+    ///     Путь к папке с эталонными запросами и ответами
     /// </summary>
     public string EtalonFolder
     {
-        get
-        {
-            return _etalonFolder;
-        }
+        get => _etalonFolder;
         set
         {
             _etalonFolder = value;
-            OnPropertyChanged("EtalonFolder");
+            OnPropertyChanged();
         }
     }
 
     /// <summary>
-    /// Путь к папке с тестовыми сценариями
+    ///     Путь к папке с тестовыми сценариями
     /// </summary>
     public string TestFolder
     {
-        get
-        {
-            return _testFolder;
-        }
+        get => _testFolder;
         set
         {
             _testFolder = value;
-            OnPropertyChanged("TestFolder");
+            OnPropertyChanged();
         }
     }
 
     /// <summary>
-    /// Путь сохранения файла
+    ///     Путь сохранения файла
     /// </summary>
     public string SavePath
     {
-        get
-        {
-            return _savePath;
-        }
+        get => _savePath;
         set
         {
             _savePath = value;
-            OnPropertyChanged("SavePath");
+            OnPropertyChanged();
         }
     }
 
     /// <summary>
-    /// Прогресс
+    ///     Прогресс
     /// </summary>
     public int Progress
     {
-        get
-        {
-            return _progress;
-        }
+        get => _progress;
         set
         {
             _progress = value;
-            OnPropertyChanged("Progress");
+            OnPropertyChanged();
         }
     }
 
     public Visibility StartVisible
     {
-        get
-        {
-            return _startEnabled;
-        }
+        get => _startEnabled;
         set
         {
             _startEnabled = value;
-            OnPropertyChanged("StartVisible");
+            OnPropertyChanged();
             OnPropertyChanged("StopVisible");
         }
     }
 
-    public Visibility StopVisible
-    {
-        get
-        {
-            return _startEnabled == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
-        }
-    }
+    public Visibility StopVisible => _startEnabled == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
     public int TotalCount
     {
-        get
-        {
-            return _totalCount;
-        }
+        get => _totalCount;
         set
         {
             _totalCount = value;
-            OnPropertyChanged("TotalCount");
+            OnPropertyChanged();
         }
     }
 
-
     public event PropertyChangedEventHandler? PropertyChanged;
+
     public void OnPropertyChanged([CallerMemberName] string prop = "")
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));

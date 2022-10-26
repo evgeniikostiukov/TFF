@@ -3,62 +3,75 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:tff.main"
         xmlns:models="clr-namespace:tff.main.Models" d:DataContext="{d:DesignInstance Type=models:MainViewModel}"
         mc:Ignorable="d"
-        Title="ТФФ Builder" MaxWidth="1000" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight" WindowStyle="ThreeDBorderWindow">
+        Title="ТФФ Builder" MaxWidth="1000" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight"
+        WindowStyle="ThreeDBorderWindow">
     <StackPanel Margin="8">
         <Grid UseLayoutRounding="True">
             <Grid.RowDefinitions>
-                <RowDefinition/>
-                <RowDefinition></RowDefinition>
-                <RowDefinition></RowDefinition>
-                <RowDefinition/>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="0.7*" MaxWidth="300px"></ColumnDefinition>
-                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="0.7*" MaxWidth="300px" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                       HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
-                       Text="Выберите файл для обработки" />
+                           HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                           Text="Выберите файл для обработки" />
             </Border>
-            <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4" MaxWidth="300px">
+            <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4"
+                    MaxWidth="300px">
                 <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                       HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
-                       Text="Укажите путь к папке с эталонными запросами и ответами" />
+                           HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                           Text="Укажите путь к папке с эталонными запросами и ответами" />
             </Border>
             <Border Grid.Row="2" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                       HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
-                       Text="Укажите путь к папке с тестовыми сценариями" />
+                           HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                           Text="Укажите путь к папке с тестовыми сценариями" />
             </Border>
             <Border Grid.Row="3" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center" TextWrapping="WrapWithOverflow"
-                       Text="Укажите путь сохранения файла" />
+                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
+                           TextWrapping="WrapWithOverflow"
+                           Text="Укажите путь сохранения файла" />
             </Border>
 
 
             <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <StackPanel Orientation="Horizontal" >
-                    <TextBlock Name="SelectTargetFileText" Background="#E4E4E4" FontSize="14" MinWidth="300px" MaxWidth="300px" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}" Text="{Binding TargetFile,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectTargetFileText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
+                               MaxWidth="300px" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                               TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
+                               Text="{Binding TargetFile,UpdateSourceTrigger=PropertyChanged}"
+                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0" Command="{Binding SelectFileCommand}" CommandParameter="TargetFile" Cursor="Hand">
-                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75" Stretch="Fill"  />
+                        <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0"
+                                Command="{Binding SelectFileCommand}" CommandParameter="TargetFile" Cursor="Hand">
+                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
+                                   Stretch="Fill" />
                         </Button>
                     </Border>
                 </StackPanel>
             </Border>
             <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectEtalonFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px" MaxWidth="300px" HorizontalAlignment="Stretch" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow"  DataContext="{Binding EntryEntity}" Text="{Binding EtalonFolder,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True"></TextBlock>
+                    <TextBlock Name="SelectEtalonFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
+                               MaxWidth="300px" HorizontalAlignment="Stretch" Height="70px" VerticalAlignment="Stretch"
+                               TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
+                               Text="{Binding EtalonFolder,UpdateSourceTrigger=PropertyChanged}"
+                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0" Command="{Binding SelectFolderCommand}" CommandParameter="EtalonFolder" Cursor="Hand">
+                        <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0"
+                                Command="{Binding SelectFolderCommand}" CommandParameter="EtalonFolder" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
-                   HorizontalAlignment="Right" Stretch="Fill"  />
+                                   HorizontalAlignment="Right" Stretch="Fill" />
                         </Button>
                     </Border>
                 </StackPanel>
@@ -66,24 +79,35 @@
 
             <Border Grid.Row="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectTestFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px" HorizontalAlignment="Stretch" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}" Text="{Binding TestFolder,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True"></TextBlock>
+                    <TextBlock Name="SelectTestFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
+                               HorizontalAlignment="Stretch" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch"
+                               TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
+                               Text="{Binding TestFolder,UpdateSourceTrigger=PropertyChanged}"
+                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right" Command="{Binding SelectFolderCommand}" CommandParameter="TestFolder" Cursor="Hand">
+                        <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right"
+                                Command="{Binding SelectFolderCommand}" CommandParameter="TestFolder" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
-                   HorizontalAlignment="Right" Stretch="Fill"  />
+                                   HorizontalAlignment="Right" Stretch="Fill" />
                         </Button>
                     </Border>
                 </StackPanel>
             </Border>
             <Border Grid.Row="3" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectSavePathText" Background="#E4E4E4" FontSize="14" MinWidth="300px" MaxWidth="300px" Height="70px" MaxHeight="120" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}" Text="{Binding SavePath,UpdateSourceTrigger=PropertyChanged}" Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True"></TextBlock>
+                    <TextBlock Name="SelectSavePathText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
+                               MaxWidth="300px" Height="70px" MaxHeight="120" HorizontalAlignment="Stretch"
+                               VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                               DataContext="{Binding EntryEntity}"
+                               Text="{Binding SavePath,UpdateSourceTrigger=PropertyChanged}"
+                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
-                        <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right" Command="{Binding SelectFolderCommand}" CommandParameter="SavePath" Cursor="Hand">
+                        <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right"
+                                Command="{Binding SelectFolderCommand}" CommandParameter="SavePath" Cursor="Hand">
                             <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="73"
-                   HorizontalAlignment="Right" Stretch="Fill"  />
+                                   HorizontalAlignment="Right" Stretch="Fill" />
                         </Button>
                     </Border>
                 </StackPanel>
@@ -93,10 +117,12 @@
         <Grid Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="0.13*"></ColumnDefinition>
+                <ColumnDefinition Width="0.13*" />
             </Grid.ColumnDefinitions>
             <Grid Grid.Row="0" Grid.Column="0">
-                <ProgressBar Name="pbStatus" DataContext="{Binding EntryEntity}" Minimum="0" Maximum="100" HorizontalAlignment="Stretch" Margin="7"  Value="{Binding Progress, UpdateSourceTrigger=PropertyChanged}"/>
+                <ProgressBar Name="pbStatus" DataContext="{Binding EntryEntity}" Minimum="0" Maximum="100"
+                             HorizontalAlignment="Stretch" Margin="7"
+                             Value="{Binding Progress, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Text>
                         <MultiBinding StringFormat="{}{0}/{1}%">
@@ -107,8 +133,16 @@
                 </TextBlock>
             </Grid>
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
-                <Button Content="Отменить"  HorizontalContentAlignment="Center" HorizontalAlignment="Right" Padding="5,5,5,5" Margin="0,7,5,5"  VerticalAlignment="Top" FontSize="18" Command="{Binding StopCommand}" Visibility="{Binding Path=EntryEntity.StopVisible, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand" />
-                <Button Content="Начать" HorizontalContentAlignment="Center" HorizontalAlignment="Right" Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Top" FontSize="18" Command="{Binding StartCommand}" Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}" Cursor="Hand"/>
+                <Button Content="Отменить" HorizontalContentAlignment="Center" HorizontalAlignment="Right"
+                        Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Top" FontSize="18"
+                        Command="{Binding StopCommand}"
+                        Visibility="{Binding Path=EntryEntity.StopVisible, UpdateSourceTrigger=PropertyChanged}"
+                        Cursor="Hand" />
+                <Button Content="Начать" HorizontalContentAlignment="Center" HorizontalAlignment="Right"
+                        Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Top" FontSize="18"
+                        Command="{Binding StartCommand}"
+                        Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}"
+                        Cursor="Hand" />
             </StackPanel>
         </Grid>
     </StackPanel>

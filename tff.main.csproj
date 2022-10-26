@@ -30,4 +30,8 @@
       </Resource>
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="Models\EntryArgs.cs" />
+    </ItemGroup>
+
 </Project>
