@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -18,6 +19,10 @@ public static class DocProcessHandler
 {
     private static BackgroundWorker _worker;
     private static Entry _entry;
+    private static readonly Regex _etalonRequestPattern = new("#a/\\d{1,}/request");
+    private static readonly Regex _etalonResponsePattern = new("#a/\\d{1,}/response");
+    private static readonly Regex _testPattern = new("#b/\\d{1,}");
+    private static readonly Regex _tagPattern = new("<\\w*?((?:.(?!\\1|>))*.?)\\1?>");
 
     public static bool Execute(Entry entry)
     {
@@ -27,16 +32,16 @@ public static class DocProcessHandler
         return true;
     }
 
-    private static void ExecuteInternal()
+    private static void ExecuteInternal(DoWorkEventArgs e)
     {
         var application = new Application();
         Document newDoc = null;
+        var currentStep = 0;
 
         try
         {
             var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
             var newFilePath = $"{_entry.SavePath}\\{fileInfo.Name.Split(".")[0]}_test.{fileInfo.Extension}";
-            var currentStep = 0;
 
             if (fileInfo.Exists)
             {
@@ -45,21 +50,14 @@ public static class DocProcessHandler
 
             newDoc = application.Documents.Open(newFilePath);
 
-            var etalonRequestPattern = new Regex("#a/\\d{1,}/request");
-            var etalonResponsePattern = new Regex("#a/\\d{1,}/response");
-            var testPattern = new Regex("#b/\\d{1,}");
-            var tagPattern = new Regex("<\\w*?((?:.(?!\\1|>))*.?)\\1?>");
-
             var fullDocText = newDoc.Range()
                 .Text;
 
-            _entry.TotalCount = etalonRequestPattern.Matches(fullDocText)
+            _entry.TotalCount = _etalonRequestPattern.Matches(fullDocText)
                                     .Count
-                                + etalonResponsePattern.Matches(fullDocText)
+                                + _etalonResponsePattern.Matches(fullDocText)
                                     .Count
-                                + testPattern.Matches(fullDocText)
-                                    .Count
-                                + tagPattern.Matches(fullDocText)
+                                + _testPattern.Matches(fullDocText)
                                     .Count;
 
             if (_entry.TotalCount == 0)
@@ -71,35 +69,17 @@ public static class DocProcessHandler
 
             for (var i = 1; i <= newDoc.Sections.Count; i++)
             {
+                if (_worker.CancellationPending)
+                {
+                    e.Cancel = true;
+
+                    break;
+                }
+
                 var wordRange = newDoc.Sections[i]
                     .Range;
 
-                var matches = etalonRequestPattern.Matches(wordRange.Text);
-
-                SetXmlText(matches,
-                    tagPattern,
-                    wordRange,
-                    ProcessType.EtalonRequest,
-                    ref currentStep
-                );
-
-                matches = etalonResponsePattern.Matches(wordRange.Text);
-
-                SetXmlText(matches,
-                    tagPattern,
-                    wordRange,
-                    ProcessType.EtalonResponse,
-                    ref currentStep
-                );
-
-                matches = testPattern.Matches(wordRange.Text);
-
-                SetXmlText(matches,
-                    tagPattern,
-                    wordRange,
-                    ProcessType.Test,
-                    ref currentStep
-                );
+                SetXmlText(wordRange,ref currentStep);
             }
 
             newDoc.Save();
@@ -111,77 +91,64 @@ public static class DocProcessHandler
         }
     }
 
-    private static void SetXmlText(MatchCollection matches,
-                                   Regex tagPattern,
-                                   Range wordRange,
-                                   ProcessType processType,
-                                   ref int currentStep)
+    private static void SetXmlText(Range wordRange, ref int currentStep)
     {
-        if (matches.Count <= 0)
+        var requestMatches = _etalonRequestPattern.Matches(wordRange.Text)
+            .OrderBy(x => x.Index)
+            .ToArray();
+
+        var responseMatches = _etalonResponsePattern.Matches(wordRange.Text)
+            .OrderBy(x => x.Index)
+            .ToArray();
+
+        var testMatches = _testPattern.Matches(wordRange.Text)
+            .OrderBy(x => x.Index)
+            .ToArray();
+
+        if (requestMatches.Length == 0 && responseMatches.Length == 0 && testMatches.Length == 0)
         {
             return;
         }
 
-        foreach (Match match in matches)
+        var iterateCount = Math.Max(Math.Max(requestMatches.Length, responseMatches.Length), testMatches.Length);
+        for (var i = 0; i < iterateCount; i++)
         {
-            ++currentStep;
-
-            var stringBuilder = new StringBuilder();
-
-            var requestNumber = match.Value.Split("/")[1];
-            var currentRange = wordRange.Duplicate;
-
-            var xmlDocument = new XmlDocument();
-            var xmlPath = GetXmlPath(requestNumber, processType);
-            xmlDocument.Load(xmlPath);
-            var element = XElement.Parse(xmlDocument.OuterXml);
-
-            var settings = new XmlWriterSettings
+            if (_worker.CancellationPending)
             {
-                OmitXmlDeclaration = true,
-                Indent = true,
-                NewLineOnAttributes = false,
-            };
-
-            using (var xmlWriter = XmlWriter.Create(stringBuilder, settings))
-            {
-                element.Save(xmlWriter);
+                return;
             }
 
-            var findObj = currentRange.Find;
-            findObj.ClearFormatting();
-            findObj.Text = match.Value;
-            findObj.Execute();
-            currentRange.Text = stringBuilder.ToString();
-            currentRange.Paragraphs.LineSpacingRule = WdLineSpacing.wdLineSpaceSingle;
-            currentRange.Paragraphs.LineUnitAfter = 0;
-            currentRange.Paragraphs.SpaceAfter = 0;
-            currentRange.Paragraphs.SpaceAfterAuto = 0;
+            var currentMatch = requestMatches.Length > i ? requestMatches[i] : null;
 
-            var progress = GetPercent(currentStep);
-            _worker.ReportProgress(progress);
-
-            var tags = tagPattern.Matches(currentRange.Text);
-
-            foreach (Match tag in tags)
+            if (currentMatch != null)
             {
-                ++currentStep;
-                var tagRange = currentRange.Duplicate;
-                tagRange.Start = tag.Index - 1;
-                var tagFind = tagRange.Find;
-                tagFind.ClearFormatting();
-                tagFind.Text = tag.Value;
-                tagFind.Execute();
-                tagRange.Font.Color = WdColor.wdColorLightBlue;
+                SetXmlRangeParams(currentMatch, wordRange, ProcessType.EtalonRequest);
+                _entry.TotalProgress = GetTotalPercent(++currentStep);
+            }
 
-                progress = GetPercent(currentStep);
-                _worker.ReportProgress(progress);
+            currentMatch = responseMatches.Length > i ? responseMatches[i] : null;
+
+            if (currentMatch != null)
+            {
+                SetXmlRangeParams(currentMatch, wordRange, ProcessType.EtalonResponse);
+                _entry.TotalProgress = GetTotalPercent(++currentStep);
+            }
+
+            currentMatch = testMatches.Length > i ? testMatches[i] : null;
+
+            if (currentMatch != null)
+            {
+                SetXmlRangeParams(currentMatch, wordRange, ProcessType.Test);
+                _entry.TotalProgress = GetTotalPercent(++currentStep);
             }
         }
     }
 
     private static string GetXmlPath(string xmlNumber, ProcessType processType)
     {
+        if (string.IsNullOrEmpty(xmlNumber))
+            return string.Empty;
+
         return processType switch
         {
             ProcessType.EtalonRequest => $"{_entry.EtalonFolder}/{xmlNumber}/Request.xml",
@@ -209,6 +176,8 @@ public static class DocProcessHandler
         {
             _entry.StartVisible = Visibility.Visible;
             _entry.Progress = 0;
+            _entry.TotalCount = 0;
+            _entry.TotalProgress = 0;
         }
 
         if (e.Error != null)
@@ -229,7 +198,7 @@ public static class DocProcessHandler
         }
 
         _entry.StartVisible = Visibility.Collapsed;
-        ExecuteInternal();
+        ExecuteInternal(e);
     }
 
     private static void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
@@ -248,11 +217,91 @@ public static class DocProcessHandler
         }
     }
 
-    private static int GetPercent(int current)
+    private static int GetPercent(int current, int totalInTemplate)
     {
-        var experssion = (int) decimal.Round(current / (decimal) _entry.TotalCount * 100);
+        var experssion = (int) decimal.Round(current / (decimal)totalInTemplate * 100);
 
         return experssion;
+    }
+
+    private static int GetTotalPercent(int current)
+    {
+        var experssion = (int)decimal.Round(current / (decimal)_entry.TotalCount * 100);
+
+        return experssion;
+    }
+
+    private static void SetStartEndIndex(Match match, Range range, bool isNeedSetStart=true)
+    {
+        if(isNeedSetStart)
+            range.Start += match.Index;
+
+        range.End = range.Start + match.Length;
+    }
+
+    private static void SetXmlRangeParams(Match match, Range wordRange, ProcessType processType)
+    {
+        _worker.ReportProgress(0);
+
+        var currentStep = 1;
+        _entry.CurrentTemplate = match.Value;
+
+        if (_worker.CancellationPending)
+        {
+            return;
+        }
+
+        var xmlPath = GetXmlPath(match.Value.Split("/")[1], processType);
+        var xmlDocument = new XmlDocument();
+        xmlDocument.Load(xmlPath);
+        var element = XElement.Parse(xmlDocument.OuterXml);
+
+        var settings = new XmlWriterSettings
+        {
+            OmitXmlDeclaration = true,
+            Indent = true,
+            NewLineOnAttributes = false,
+        };
+
+        var stringBuilder = new StringBuilder();
+
+        using (var xmlWriter = XmlWriter.Create(stringBuilder, settings))
+        {
+            element.Save(xmlWriter);
+        }
+
+        var currentRange = wordRange.Duplicate;
+        SetStartEndIndex(match, currentRange, false);
+
+        currentRange.Text = stringBuilder.ToString();
+        currentRange.Paragraphs.LineSpacing = 12;
+        currentRange.Paragraphs.SpaceAfter = 0;
+
+        wordRange.Start += stringBuilder.Length;
+        stringBuilder.Clear();
+
+        var tags = _tagPattern.Matches(currentRange.Text);
+        var tagsCount = tags.Count;
+        var progress = GetPercent(currentStep, tagsCount + 1);
+        _worker.ReportProgress(progress);
+
+        _entry.CurrentTemplate = $"Обработка тэгов {match.Value}";
+
+        foreach (Match tag in tags)
+        {
+            if (_worker.CancellationPending)
+            {
+                return;
+            }
+
+            ++currentStep;
+            var tagRange = currentRange.Duplicate;
+            SetStartEndIndex(tag, tagRange);
+            tagRange.Font.Color = WdColor.wdColorLightBlue;
+
+            progress = GetPercent(currentStep, tagsCount+1);
+            _worker.ReportProgress(progress);
+        }
     }
 
     private enum ProcessType

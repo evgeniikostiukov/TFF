@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Forms;
 using tff.main.Commands;
 using tff.main.Handlers;
+using System.Collections.Generic;
 using MessageBox = System.Windows.Forms.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -19,6 +20,8 @@ internal class MainViewModel : INotifyPropertyChanged
     private StartCommand _startCommand;
 
     private StopCommand _stopCommand;
+
+    private readonly HashSet<string> _requiredProperties = new() { nameof(Entry.TargetFile), nameof(Entry.EtalonFolder), nameof(Entry.TestFolder), };
 
     public MainViewModel()
     {
@@ -87,7 +90,7 @@ internal class MainViewModel : INotifyPropertyChanged
                        {
                            foreach (var propertyInfo in EntryEntity.GetType()
                                         .GetProperties())
-                               if (propertyInfo.PropertyType == typeof(string)
+                               if (propertyInfo.PropertyType == typeof(string) && _requiredProperties.Contains(propertyInfo.Name)
                                    && propertyInfo.GetValue(EntryEntity) == null)
                                {
                                    MessageBox.Show("Заполните все поля", "Ошибка");
