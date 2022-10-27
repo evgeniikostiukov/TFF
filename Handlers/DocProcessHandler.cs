@@ -142,10 +142,7 @@ public class DocProcessHandler
         var text = p.InnerText;
         _entry.CurrentTemplate = text;
 
-        var run = p.Elements<Run>()
-            .First();
-
-        run.RemoveAllChildren<Text>();
+        p.RemoveAllChildren<Run>();
 
         var processType = ProcessMatch(text) ?? throw new Exception("Не найден вид шаблона");
         var xmlPath = GetXmlPath(text.Split("/")[1], processType);
@@ -270,7 +267,9 @@ public class DocProcessHandler
             newtext.Text =
                 $"{new string(' ', indent)}<{elem.Name.LocalName}{(elem.Attributes().Any() ? " " : "")}{string.Join(" ", elem.Attributes())}>";
 
-            newrun.Append(new Break());
+            if(level > 0)
+                newrun.Append(new Break());
+
             newrun.Append(newtext);
             p.Append(newrun);
 
