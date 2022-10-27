@@ -14,7 +14,6 @@ public class Entry : INotifyPropertyChanged
     private string _targetFile;
     private string _testFolder;
     private int _totalCount;
-    private int _totalProgress;
 
     /// <summary>
     ///     Файл для обработки
