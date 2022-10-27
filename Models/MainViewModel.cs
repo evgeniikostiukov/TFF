@@ -1,11 +1,12 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Forms;
 using tff.main.Commands;
 using tff.main.Handlers;
-using System.Collections.Generic;
 using MessageBox = System.Windows.Forms.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -13,6 +14,16 @@ namespace tff.main.Models;
 
 internal class MainViewModel : INotifyPropertyChanged
 {
+    private readonly DocProcessHandler _docProcessHandler;
+
+    private readonly HashSet<string> _requiredProperties = new()
+    {
+        nameof(Entry.TargetFile),
+        nameof(Entry.EtalonFolder),
+        nameof(Entry.TestFolder),
+        nameof(Entry.SavePath),
+    };
+
     private SelectFileCommand _selectFileCommand;
 
     private SelectFolderCommand _selectFolderCommand;
@@ -21,14 +32,14 @@ internal class MainViewModel : INotifyPropertyChanged
 
     private StopCommand _stopCommand;
 
-    private readonly HashSet<string> _requiredProperties = new() { nameof(Entry.TargetFile), nameof(Entry.EtalonFolder), nameof(Entry.TestFolder), };
-
     public MainViewModel()
     {
         EntryEntity = new Entry
         {
             StartVisible = Visibility.Visible,
         };
+
+        _docProcessHandler = new DocProcessHandler(EntryEntity);
     }
 
     public Entry EntryEntity { get; set; }
@@ -88,18 +99,19 @@ internal class MainViewModel : INotifyPropertyChanged
         {
             return _startCommand ??= new StartCommand(_ =>
                        {
-                           foreach (var propertyInfo in EntryEntity.GetType()
-                                        .GetProperties())
-                               if (propertyInfo.PropertyType == typeof(string) && _requiredProperties.Contains(propertyInfo.Name)
-                                   && propertyInfo.GetValue(EntryEntity) == null)
-                               {
-                                   MessageBox.Show("Заполните все поля", "Ошибка");
+                           if (EntryEntity.GetType()
+                               .GetProperties()
+                               .Any(propertyInfo => propertyInfo.PropertyType == typeof(string)
+                                                    && _requiredProperties.Contains(propertyInfo.Name)
+                                                    && propertyInfo.GetValue(EntryEntity) == null
+                               ))
+                           {
+                               MessageBox.Show("Заполните все поля", "Ошибка");
 
-                                   return;
-                               }
+                               return;
+                           }
 
-                           DocProcessHandler.Execute(EntryEntity);
-                           MessageBox.Show("Задача запущена");
+                           _docProcessHandler.Execute();
                        }
                    );
         }
@@ -107,7 +119,7 @@ internal class MainViewModel : INotifyPropertyChanged
 
     public StopCommand StopCommand
     {
-        get { return _stopCommand ??= new StopCommand(_ => { DocProcessHandler.worker_Stop(); }); }
+        get { return _stopCommand ??= new StopCommand(_ => { _docProcessHandler.worker_Stop(); }); }
     }
 
     public event PropertyChangedEventHandler PropertyChanged;

@@ -6,15 +6,15 @@ namespace tff.main.Models;
 
 public class Entry : INotifyPropertyChanged
 {
+    private string _currentTemplate;
     private string _etalonFolder;
     private int _progress;
-    private int _totalProgress;
     private string _savePath;
     private Visibility _startEnabled;
     private string _targetFile;
     private string _testFolder;
     private int _totalCount;
-    private string _currentTemplate;
+    private int _totalProgress;
 
     /// <summary>
     ///     Файл для обработки
@@ -77,16 +77,6 @@ public class Entry : INotifyPropertyChanged
         set
         {
             _progress = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public int TotalProgress
-    {
-        get => _totalProgress;
-        set
-        {
-            _totalProgress = value;
             OnPropertyChanged();
         }
     }

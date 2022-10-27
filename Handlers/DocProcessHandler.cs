@@ -1,153 +1,132 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Xml;
 using System.Xml.Linq;
-using Microsoft.Office.Interop.Word;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using tff.main.Models;
-using Application = Microsoft.Office.Interop.Word.Application;
 using MessageBox = System.Windows.Forms.MessageBox;
-using Range = Microsoft.Office.Interop.Word.Range;
+using Style = DocumentFormat.OpenXml.Wordprocessing.Style;
 
 namespace tff.main.Handlers;
 
-public static class DocProcessHandler
+public class DocProcessHandler
 {
-    private static BackgroundWorker _worker;
-    private static Entry _entry;
-    private static readonly Regex _etalonRequestPattern = new("#a/\\d{1,}/request");
-    private static readonly Regex _etalonResponsePattern = new("#a/\\d{1,}/response");
-    private static readonly Regex _testPattern = new("#b/\\d{1,}");
-    private static readonly Regex _tagPattern = new("<\\w*?((?:.(?!\\1|>))*.?)\\1?>");
+    private readonly Regex _etalonRequestPattern;
+    private readonly Regex _etalonResponsePattern;
+    private readonly Regex _testPattern;
+    private readonly Entry _entry;
+    private BackgroundWorker _worker;
 
-    public static bool Execute(Entry entry)
+    public DocProcessHandler(Entry entry)
     {
-        InitWorker(entry);
-        _worker.RunWorkerAsync();
-
-        return true;
+        InitWorker();
+        _etalonRequestPattern = new Regex("#a/\\d{1,}/request");
+        _etalonResponsePattern = new Regex("#a/\\d{1,}/response");
+        _testPattern = new Regex("#b/\\d{1,}");
+        _entry = entry;
     }
 
-    private static void ExecuteInternal(DoWorkEventArgs e)
+    public void Execute()
     {
-        var application = new Application();
-        Document newDoc = null;
+        _worker.RunWorkerAsync();
+    }
+
+    private void ExecuteInternal(DoWorkEventArgs e)
+    {
+        var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
+        var newFilePath = $"{_entry.SavePath}\\{fileInfo.Name.Split(".")[0]}_ГОТОВЫЙ{fileInfo.Extension}";
+
+        var oldDoc = WordprocessingDocument.Open(_entry.TargetFile,
+            false,
+            new OpenSettings
+            {
+                AutoSave = false,
+            }
+        );
+
+        using (oldDoc.Clone(newFilePath))
+        {
+            oldDoc.Dispose();
+        }
+
+        using var newDoc = WordprocessingDocument.Open(newFilePath, true);
+
+        var templateParagraphs = newDoc.MainDocumentPart?.Document?.Body?.ChildElements.Where(x =>
+                _etalonRequestPattern.IsMatch(x.InnerText)
+                || _etalonResponsePattern.IsMatch(x.InnerText)
+                || _testPattern.IsMatch(x.InnerText)
+            )
+            .ToArray();
+
+        _entry.TotalCount = templateParagraphs?.Length ?? 0;
+
+        if (_entry.TotalCount == 0)
+        {
+            throw new Exception(
+                "Нет шаблонов для заполнения. Проверьте исходный файл на существование шаблонов типа #a/1/method или #b/1"
+            );
+        }
+
+        InitStyles(newDoc);
+        ProcessTemplates(templateParagraphs);
+    }
+
+    private void ProcessTemplates(OpenXmlElement[] templateParagraphs)
+    {
         var currentStep = 0;
 
-        try
+        foreach (var openXmlElement in templateParagraphs)
         {
-            var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
-            var newFilePath = $"{_entry.SavePath}\\{fileInfo.Name.Split(".")[0]}_test.{fileInfo.Extension}";
+            if (openXmlElement is not Paragraph p) continue;
 
-            if (fileInfo.Exists)
-            {
-                fileInfo.CopyTo(newFilePath, true);
-            }
+            ProcessTemplate(p);
 
-            newDoc = application.Documents.Open(newFilePath);
-
-            var fullDocText = newDoc.Range()
-                .Text;
-
-            _entry.TotalCount = _etalonRequestPattern.Matches(fullDocText)
-                                    .Count
-                                + _etalonResponsePattern.Matches(fullDocText)
-                                    .Count
-                                + _testPattern.Matches(fullDocText)
-                                    .Count;
-
-            if (_entry.TotalCount == 0)
-            {
-                throw new Exception(
-                    "Нет шаблонов для заполнения. Проверьте исходный файл на существование шаблонов типа #a/1/method или #b/1"
-                );
-            }
-
-            for (var i = 1; i <= newDoc.Sections.Count; i++)
-            {
-                if (_worker.CancellationPending)
-                {
-                    e.Cancel = true;
-
-                    break;
-                }
-
-                var wordRange = newDoc.Sections[i]
-                    .Range;
-
-                SetXmlText(wordRange,ref currentStep);
-            }
-
-            newDoc.Save();
-        }
-        finally
-        {
-            newDoc?.Close();
-            application.Quit();
+            _worker.ReportProgress(++currentStep);
         }
     }
 
-    private static void SetXmlText(Range wordRange, ref int currentStep)
+    private ProcessType? ProcessMatch(string text)
     {
-        var requestMatches = _etalonRequestPattern.Matches(wordRange.Text)
-            .OrderBy(x => x.Index)
-            .ToArray();
-
-        var responseMatches = _etalonResponsePattern.Matches(wordRange.Text)
-            .OrderBy(x => x.Index)
-            .ToArray();
-
-        var testMatches = _testPattern.Matches(wordRange.Text)
-            .OrderBy(x => x.Index)
-            .ToArray();
-
-        if (requestMatches.Length == 0 && responseMatches.Length == 0 && testMatches.Length == 0)
+        if (_etalonRequestPattern.IsMatch(text))
         {
-            return;
+            return ProcessType.EtalonRequest;
         }
 
-        var iterateCount = Math.Max(Math.Max(requestMatches.Length, responseMatches.Length), testMatches.Length);
-        for (var i = 0; i < iterateCount; i++)
+        if (_etalonResponsePattern.IsMatch(text))
         {
-            if (_worker.CancellationPending)
-            {
-                return;
-            }
-
-            var currentMatch = requestMatches.Length > i ? requestMatches[i] : null;
-
-            if (currentMatch != null)
-            {
-                SetXmlRangeParams(currentMatch, wordRange, ProcessType.EtalonRequest);
-                _entry.TotalProgress = GetTotalPercent(++currentStep);
-            }
-
-            currentMatch = responseMatches.Length > i ? responseMatches[i] : null;
-
-            if (currentMatch != null)
-            {
-                SetXmlRangeParams(currentMatch, wordRange, ProcessType.EtalonResponse);
-                _entry.TotalProgress = GetTotalPercent(++currentStep);
-            }
-
-            currentMatch = testMatches.Length > i ? testMatches[i] : null;
-
-            if (currentMatch != null)
-            {
-                SetXmlRangeParams(currentMatch, wordRange, ProcessType.Test);
-                _entry.TotalProgress = GetTotalPercent(++currentStep);
-            }
+            return ProcessType.EtalonResponse;
         }
+
+        if (_testPattern.IsMatch(text))
+        {
+            return ProcessType.Test;
+        }
+
+        return null;
     }
 
-    private static string GetXmlPath(string xmlNumber, ProcessType processType)
+    private XDocument GetXmlElement(string xmlPath)
+    {
+        var xmlDocument = new XmlDocument();
+        xmlDocument.Load(xmlPath);
+        var element = XDocument.Parse(xmlDocument.OuterXml);
+
+        return element;
+    }
+
+    private string GetXmlPath(string xmlNumber, ProcessType processType)
     {
         if (string.IsNullOrEmpty(xmlNumber))
+        {
             return string.Empty;
+        }
 
         return processType switch
         {
@@ -158,26 +137,239 @@ public static class DocProcessHandler
         };
     }
 
-    private static void InitWorker(Entry entry)
+    private void ProcessTemplate(Paragraph p)
     {
-        _worker = new BackgroundWorker();
-        _worker.WorkerReportsProgress = true;
+        var text = p.InnerText;
+        _entry.CurrentTemplate = text;
+
+        var run = p.Elements<Run>()
+            .First();
+
+        run.RemoveAllChildren<Text>();
+
+        var processType = ProcessMatch(text) ?? throw new Exception("Не найден вид шаблона");
+        var xmlPath = GetXmlPath(text.Split("/")[1], processType);
+        var element = GetXmlElement(xmlPath);
+        SetXml(p, element.Elements(), 0);
+    }
+
+    private void InitStyles(WordprocessingDocument newDoc)
+    {
+        var part = newDoc?.MainDocumentPart?.StyleDefinitionsPart;
+
+        if (part == null)
+        {
+            part = newDoc?.MainDocumentPart?.AddNewPart<StyleDefinitionsPart>();
+            var root = new Styles();
+            root.Save(part);
+        }
+
+        var styles = part.Styles;
+
+        var blueTagStyle = new Style
+        {
+            Type = StyleValues.Character,
+            StyleId = "blueTag",
+            CustomStyle = true,
+        };
+
+        var plainTextStyle = new Style
+        {
+            Type = StyleValues.Character,
+            StyleId = "plainText",
+            CustomStyle = true,
+        };
+
+        var styleName1 = new StyleName
+        {
+            Val = "Blue tag",
+        };
+
+        var linkedStyle1 = new LinkedStyle
+        {
+            Val = "linkedBlue",
+        };
+
+        blueTagStyle.Append(styleName1);
+        blueTagStyle.Append(linkedStyle1);
+
+        var runStyle = new StyleRunProperties();
+
+        var color = new Color
+        {
+            ThemeColor = ThemeColorValues.Accent1,
+        };
+
+        var font = new RunFonts
+        {
+            Ascii = "Times New Roman",
+        };
+
+        var fontSize = new FontSize
+        {
+            Val = "24",
+        };
+
+        runStyle.Append(color);
+        runStyle.Append(font);
+        runStyle.Append(fontSize);
+        blueTagStyle.Append(runStyle);
+        styles?.Append(blueTagStyle);
+
+        var styleName2 = new StyleName
+        {
+            Val = "Plain text",
+        };
+
+        var linkedStyle2 = new LinkedStyle
+        {
+            Val = "linkedPlain",
+        };
+
+        var color2 = new Color
+        {
+            ThemeColor = ThemeColorValues.Text1,
+        };
+
+        var font2 = new RunFonts
+        {
+            Ascii = "Times New Roman",
+        };
+
+        var fontSize2 = new FontSize
+        {
+            Val = "24",
+        };
+
+        plainTextStyle.Append(styleName2);
+        plainTextStyle.Append(linkedStyle2);
+        var runStyle2 = new StyleRunProperties();
+        runStyle2.Append(color2);
+        runStyle2.Append(font2);
+        runStyle2.Append(fontSize2);
+        plainTextStyle.Append(runStyle2);
+        styles?.Append(plainTextStyle);
+    }
+
+    private void SetXml(Paragraph p, IEnumerable<XElement> elements, int level)
+    {
+        foreach (var elem in elements)
+        {
+            var indent = level * 2;
+            var newtext = new Text();
+            var newrun = new Run();
+            var runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
+
+            runProp.RunStyle = new RunStyle
+            {
+                Val = "blueTag",
+            };
+
+            newtext.Space = SpaceProcessingModeValues.Preserve;
+
+            newtext.Text =
+                $"{new string(' ', indent)}<{elem.Name.LocalName}{(elem.Attributes().Any() ? " " : "")}{string.Join(" ", elem.Attributes())}>";
+
+            newrun.Append(new Break());
+            newrun.Append(newtext);
+            p.Append(newrun);
+
+            SetXml(p, elem.Elements(), level + 1);
+
+            if (!elem.Elements()
+                    .Any()
+                && elem.Value != null)
+            {
+                newtext = new Text();
+                newrun = new Run();
+                runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
+
+                runProp.RunStyle = new RunStyle
+                {
+                    Val = "plainText",
+                };
+
+                newtext.Space = SpaceProcessingModeValues.Preserve;
+                newtext.Text = elem.Value;
+                newrun.Append(newtext);
+                p.Append(newrun);
+                indent = 0;
+            }
+
+            newtext = new Text();
+            newrun = new Run();
+            runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
+
+            newtext.Space = SpaceProcessingModeValues.Preserve;
+
+            runProp.RunStyle = new RunStyle
+            {
+                Val = "blueTag",
+            };
+
+            newtext.Text = $"{new string(' ', indent)}</{elem.Name.LocalName}>";
+
+            if (elem.Elements()
+                .Any())
+            {
+                newrun.Append(new Break());
+            }
+
+            newrun.Append(newtext);
+            p.Append(newrun);
+        }
+    }
+
+    #region Worker
+
+    private void InitWorker()
+    {
+        _worker = new BackgroundWorker
+        {
+            WorkerReportsProgress = true,
+            WorkerSupportsCancellation = true,
+        };
+
         _worker.DoWork += worker_DoWork;
         _worker.ProgressChanged += worker_ProgressChanged;
         _worker.RunWorkerCompleted += _worker_RunWorkerCompleted;
-        _worker.WorkerSupportsCancellation = true;
-
-        _entry = entry;
     }
 
-    private static void _worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+    private void worker_DoWork(object sender, DoWorkEventArgs e)
+    {
+        if (_entry == null)
+        {
+            return;
+        }
+
+        _entry.StartVisible = Visibility.Collapsed;
+        ExecuteInternal(e);
+    }
+
+    private void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+    {
+        if (_entry != null)
+        {
+            _entry.Progress = e.ProgressPercentage;
+        }
+    }
+
+    public void worker_Stop()
+    {
+        if (_worker is {WorkerSupportsCancellation: true, CancellationPending: false,})
+        {
+            _worker.CancelAsync();
+        }
+    }
+
+    private void _worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
     {
         if (_entry != null)
         {
             _entry.StartVisible = Visibility.Visible;
             _entry.Progress = 0;
             _entry.TotalCount = 0;
-            _entry.TotalProgress = 0;
+            _entry.CurrentTemplate = string.Empty;
         }
 
         if (e.Error != null)
@@ -190,119 +382,7 @@ public static class DocProcessHandler
         MessageBox.Show($"Задача {(!e.Cancelled ? "выполнена" : "отменена")}", "Завершение");
     }
 
-    private static void worker_DoWork(object sender, DoWorkEventArgs e)
-    {
-        if (_entry == null)
-        {
-            return;
-        }
-
-        _entry.StartVisible = Visibility.Collapsed;
-        ExecuteInternal(e);
-    }
-
-    private static void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
-    {
-        if (_entry != null)
-        {
-            _entry.Progress = e.ProgressPercentage;
-        }
-    }
-
-    public static void worker_Stop()
-    {
-        if (_worker is {WorkerSupportsCancellation: true, CancellationPending: false,})
-        {
-            _worker.CancelAsync();
-        }
-    }
-
-    private static int GetPercent(int current, int totalInTemplate)
-    {
-        var experssion = (int) decimal.Round(current / (decimal)totalInTemplate * 100);
-
-        return experssion;
-    }
-
-    private static int GetTotalPercent(int current)
-    {
-        var experssion = (int)decimal.Round(current / (decimal)_entry.TotalCount * 100);
-
-        return experssion;
-    }
-
-    private static void SetStartEndIndex(Match match, Range range, bool isNeedSetStart=true)
-    {
-        if(isNeedSetStart)
-            range.Start += match.Index;
-
-        range.End = range.Start + match.Length;
-    }
-
-    private static void SetXmlRangeParams(Match match, Range wordRange, ProcessType processType)
-    {
-        _worker.ReportProgress(0);
-
-        var currentStep = 1;
-        _entry.CurrentTemplate = match.Value;
-
-        if (_worker.CancellationPending)
-        {
-            return;
-        }
-
-        var xmlPath = GetXmlPath(match.Value.Split("/")[1], processType);
-        var xmlDocument = new XmlDocument();
-        xmlDocument.Load(xmlPath);
-        var element = XElement.Parse(xmlDocument.OuterXml);
-
-        var settings = new XmlWriterSettings
-        {
-            OmitXmlDeclaration = true,
-            Indent = true,
-            NewLineOnAttributes = false,
-        };
-
-        var stringBuilder = new StringBuilder();
-
-        using (var xmlWriter = XmlWriter.Create(stringBuilder, settings))
-        {
-            element.Save(xmlWriter);
-        }
-
-        var currentRange = wordRange.Duplicate;
-        SetStartEndIndex(match, currentRange, false);
-
-        currentRange.Text = stringBuilder.ToString();
-        currentRange.Paragraphs.LineSpacing = 12;
-        currentRange.Paragraphs.SpaceAfter = 0;
-
-        wordRange.Start += stringBuilder.Length;
-        stringBuilder.Clear();
-
-        var tags = _tagPattern.Matches(currentRange.Text);
-        var tagsCount = tags.Count;
-        var progress = GetPercent(currentStep, tagsCount + 1);
-        _worker.ReportProgress(progress);
-
-        _entry.CurrentTemplate = $"Обработка тэгов {match.Value}";
-
-        foreach (Match tag in tags)
-        {
-            if (_worker.CancellationPending)
-            {
-                return;
-            }
-
-            ++currentStep;
-            var tagRange = currentRange.Duplicate;
-            SetStartEndIndex(tag, tagRange);
-            tagRange.Font.Color = WdColor.wdColorLightBlue;
-
-            progress = GetPercent(currentStep, tagsCount+1);
-            _worker.ReportProgress(progress);
-        }
-    }
+    #endregion
 
     private enum ProcessType
     {

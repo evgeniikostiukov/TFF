@@ -7,6 +7,21 @@
         mc:Ignorable="d"
         Title="ТФФ Builder" MaxWidth="1000" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight"
         WindowStyle="ThreeDBorderWindow">
+    <Window.Resources>
+        <BitmapImage UriSource="Content/icon-search.jpg" x:Shared="False" x:Key="IconSearch" />
+        <Style x:Key="TextBoxStyle" TargetType="TextBlock">
+            <Setter Property="Padding" Value="7px 2px 2px 2px" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+            <Setter Property="FontSize" Value="18" />
+        </Style>
+        <Style x:Key="SearchIconStyle" TargetType="Image">
+            <Setter Property="MaxWidth" Value="85px" />
+            <Setter Property="MaxHeight" Value="75px" />
+            <Setter Property="Stretch" Value="Fill" />
+        </Style>
+    </Window.Resources>
     <StackPanel Margin="8">
         <Grid UseLayoutRounding="True">
             <Grid.RowDefinitions>
@@ -20,24 +35,20 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                           HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Выберите файл для обработки" />
             </Border>
             <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4"
                     MaxWidth="300px">
-                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                           HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Укажите путь к папке с эталонными запросами и ответами" />
             </Border>
             <Border Grid.Row="2" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                           HorizontalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Укажите путь к папке с тестовыми сценариями" />
             </Border>
             <Border Grid.Row="3" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <TextBlock Padding="7px 2px 2px 2px" FontSize="18" VerticalAlignment="Center"
-                           TextWrapping="WrapWithOverflow"
+                <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Укажите путь сохранения файла" />
             </Border>
 
@@ -48,13 +59,12 @@
                                MaxWidth="300px" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
                                Text="{Binding TargetFile,UpdateSourceTrigger=PropertyChanged}"
-                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
+                               Padding="2" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
                         <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0"
                                 Command="{Binding SelectFileCommand}" CommandParameter="TargetFile" Cursor="Hand">
-                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
-                                   Stretch="Fill" />
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
                         </Button>
                     </Border>
                 </StackPanel>
@@ -65,13 +75,13 @@
                                MaxWidth="300px" HorizontalAlignment="Stretch" Height="70px" VerticalAlignment="Stretch"
                                TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
                                Text="{Binding EtalonFolder,UpdateSourceTrigger=PropertyChanged}"
-                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
+                               Padding="2" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
                         <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0"
                                 Command="{Binding SelectFolderCommand}" CommandParameter="EtalonFolder" Cursor="Hand">
-                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
-                                   HorizontalAlignment="Right" Stretch="Fill" />
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+
                         </Button>
                     </Border>
                 </StackPanel>
@@ -83,13 +93,13 @@
                                HorizontalAlignment="Stretch" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch"
                                TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
                                Text="{Binding TestFolder,UpdateSourceTrigger=PropertyChanged}"
-                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
+                               Padding="2" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
                         <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right"
                                 Command="{Binding SelectFolderCommand}" CommandParameter="TestFolder" Cursor="Hand">
-                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="75"
-                                   HorizontalAlignment="Right" Stretch="Fill" />
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+
                         </Button>
                     </Border>
                 </StackPanel>
@@ -101,13 +111,13 @@
                                VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow"
                                DataContext="{Binding EntryEntity}"
                                Text="{Binding SavePath,UpdateSourceTrigger=PropertyChanged}"
-                               Grid.IsSharedSizeScope="True" Padding="2" AutomationProperties.IsRequiredForForm="True" />
+                               Padding="2" />
                     <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
 
                         <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right"
                                 Command="{Binding SelectFolderCommand}" CommandParameter="SavePath" Cursor="Hand">
-                            <Image Source="C:\UNP\tff.util\tff\Content\icon-search.jpg" MaxWidth="85px" MaxHeight="73"
-                                   HorizontalAlignment="Right" Stretch="Fill" />
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+
                         </Button>
                     </Border>
                 </StackPanel>
@@ -125,9 +135,10 @@
                              Value="{Binding Progress, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Text>
-                        <MultiBinding StringFormat="{}{0}/{1}%">
+                        <MultiBinding StringFormat="{}{2}: {0}/{1}%">
                             <Binding Path="Value" ElementName="pbStatus" />
                             <Binding Path="Maximum" ElementName="pbStatus" />
+                            <Binding Path="EntryEntity.CurrentTemplate" />
                         </MultiBinding>
                     </TextBlock.Text>
                 </TextBlock>
@@ -144,6 +155,7 @@
                         Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}"
                         Cursor="Hand" />
             </StackPanel>
+
         </Grid>
     </StackPanel>
 </Window>

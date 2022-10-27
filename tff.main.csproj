@@ -5,33 +5,33 @@
         <TargetFramework>net6.0-windows</TargetFramework>
         <Nullable>disable</Nullable>
         <UseWPF>true</UseWPF>
-		<UseWindowsForms>true</UseWindowsForms>
+        <UseWindowsForms>true</UseWindowsForms>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DebugType>full</DebugType>
     </PropertyGroup>
 
     <ItemGroup>
-      <None Remove="Content\icon-search.jpg" />
+        <COMReference Include="Microsoft.Office.Interop.Word">
+            <WrapperTool>tlbimp</WrapperTool>
+            <VersionMinor>7</VersionMinor>
+            <VersionMajor>8</VersionMajor>
+            <Guid>00020905-0000-0000-c000-000000000046</Guid>
+            <Lcid>0</Lcid>
+            <Isolated>false</Isolated>
+            <EmbedInteropTypes>true</EmbedInteropTypes>
+        </COMReference>
     </ItemGroup>
 
     <ItemGroup>
-      <COMReference Include="Microsoft.Office.Interop.Word">
-        <WrapperTool>tlbimp</WrapperTool>
-        <VersionMinor>7</VersionMinor>
-        <VersionMajor>8</VersionMajor>
-        <Guid>00020905-0000-0000-c000-000000000046</Guid>
-        <Lcid>0</Lcid>
-        <Isolated>false</Isolated>
-        <EmbedInteropTypes>true</EmbedInteropTypes>
-      </COMReference>
+        <PackageReference Include="DocumentFormat.OpenXml" Version="2.18.0"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Resource Include="Content\icon-search.jpg">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Resource>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="Models\EntryArgs.cs" />
+        <Resource Include="Content\icon-search.jpg">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Resource>
     </ItemGroup>
 
 </Project>
