@@ -21,10 +21,44 @@
             <Setter Property="MaxHeight" Value="75px" />
             <Setter Property="Stretch" Value="Fill" />
         </Style>
+        <Style x:Key="SearchTextBlockStyle" TargetType="TextBlock">
+            <Setter Property="Background" Value="#E4E4E4" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinWidth" Value="300px" />
+            <Setter Property="MaxWidth" Value="300px" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="TextWrapping" Value="WrapWithOverflow" />
+            <Setter Property="Height" Value="70px" />
+        </Style>
+        <Style x:Key="BorderBlackStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="Black" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style x:Key="ButtonNoThickness" TargetType="Button">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+        </Style>
+        <Style x:Key="BorderLeftGray" TargetType="Border">
+            <Setter Property="BorderThickness" Value="2 0 0 0" />
+            <Setter Property="BorderBrush" Value="Gray" />
+        </Style>
+        <Style x:Key="StartStopButtonStyle" TargetType="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Margin" Value="0 7 5 5" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
     </Window.Resources>
     <StackPanel Margin="8">
         <Grid UseLayoutRounding="True">
             <Grid.RowDefinitions>
+                <RowDefinition />
                 <RowDefinition />
                 <RowDefinition />
                 <RowDefinition />
@@ -34,97 +68,102 @@
                 <ColumnDefinition Width="0.7*" MaxWidth="300px" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Row="0" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource BorderBlackStyle}">
                 <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Выберите файл для обработки" />
             </Border>
-            <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4"
-                    MaxWidth="300px">
+            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource BorderBlackStyle}">
+                <TextBlock Style="{StaticResource TextBoxStyle}"
+                           Text="Выберите XSD схему" />
+            </Border>
+            <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource BorderBlackStyle}">
                 <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Укажите путь к папке с эталонными запросами и ответами" />
             </Border>
-            <Border Grid.Row="2" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+            <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource BorderBlackStyle}">
                 <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Укажите путь к папке с тестовыми сценариями" />
             </Border>
-            <Border Grid.Row="3" Grid.Column="0" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+            <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource BorderBlackStyle}">
                 <TextBlock Style="{StaticResource TextBoxStyle}"
                            Text="Укажите путь сохранения файла" />
             </Border>
 
 
-            <Border Grid.Row="0" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
+            <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource BorderBlackStyle}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectTargetFileText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
-                               MaxWidth="300px" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                               TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
-                               Text="{Binding TargetFile,UpdateSourceTrigger=PropertyChanged}"
-                               Padding="2" />
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
-
-                        <Button Name="SelectTargetFileBtn" BorderThickness="0,0,0,0"
-                                Command="{Binding SelectFileCommand}" CommandParameter="TargetFile" Cursor="Hand">
-                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
-                        </Button>
-                    </Border>
-                </StackPanel>
-            </Border>
-            <Border Grid.Row="1" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectEtalonFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
-                               MaxWidth="300px" HorizontalAlignment="Stretch" Height="70px" VerticalAlignment="Stretch"
-                               TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
-                               Text="{Binding EtalonFolder,UpdateSourceTrigger=PropertyChanged}"
-                               Padding="2" />
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
-
-                        <Button Name="SelectEtalonFolderBtn" BorderThickness="0,0,0,0"
-                                Command="{Binding SelectFolderCommand}" CommandParameter="EtalonFolder" Cursor="Hand">
-                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
-
-                        </Button>
-                    </Border>
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Row="2" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectTestFolderText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
-                               HorizontalAlignment="Stretch" MaxWidth="300px" Height="70px" VerticalAlignment="Stretch"
-                               TextWrapping="WrapWithOverflow" DataContext="{Binding EntryEntity}"
-                               Text="{Binding TestFolder,UpdateSourceTrigger=PropertyChanged}"
-                               Padding="2" />
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
-
-                        <Button Name="SelectTestFolderBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right"
-                                Command="{Binding SelectFolderCommand}" CommandParameter="TestFolder" Cursor="Hand">
-                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
-
-                        </Button>
-                    </Border>
-                </StackPanel>
-            </Border>
-            <Border Grid.Row="3" Grid.Column="1" BorderBrush="Black" BorderThickness="2" CornerRadius="4">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="SelectSavePathText" Background="#E4E4E4" FontSize="14" MinWidth="300px"
-                               MaxWidth="300px" Height="70px" MaxHeight="120" HorizontalAlignment="Stretch"
-                               VerticalAlignment="Stretch" TextWrapping="WrapWithOverflow"
+                    <TextBlock Name="SelectTargetFileText" Style="{StaticResource SearchTextBlockStyle}"
                                DataContext="{Binding EntryEntity}"
-                               Text="{Binding SavePath,UpdateSourceTrigger=PropertyChanged}"
+                               Text="{Binding TargetFile, UpdateSourceTrigger=PropertyChanged}"
                                Padding="2" />
-                    <Border BorderThickness=" 2 0 0 0" BorderBrush="Gray">
-
-                        <Button Name="SelectSavePathBtn" BorderThickness="0,0,0,0" HorizontalAlignment="Right"
-                                Command="{Binding SelectFolderCommand}" CommandParameter="SavePath" Cursor="Hand">
+                    <Border Style="{StaticResource BorderLeftGray}">
+                        <Button Name="SelectTargetFileBtn" Style="{StaticResource ButtonNoThickness}"
+                                Command="{Binding SelectFileCommand}" CommandParameter="TargetFile">
                             <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource BorderBlackStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectTargetXsdFileText" Style="{StaticResource SearchTextBlockStyle}"
+                               DataContext="{Binding EntryEntity}"
+                               Text="{Binding TargetXsdFile, UpdateSourceTrigger=PropertyChanged}"
+                               Padding="2" />
+                    <Border Style="{StaticResource BorderLeftGray}">
+                        <Button Name="SelectTargetXsdFileBtn" Style="{StaticResource ButtonNoThickness}"
+                                Command="{Binding SelectFileCommand}" CommandParameter="[TargetXsdFile, XSD File|*.xsd]">
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource BorderBlackStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectEtalonFolderText" Style="{StaticResource SearchTextBlockStyle}"
+                               DataContext="{Binding EntryEntity}"
+                               Text="{Binding EtalonFolder, UpdateSourceTrigger=PropertyChanged}"
+                               Padding="2" />
+                    <Border Style="{StaticResource BorderLeftGray}">
+                        <Button Name="SelectEtalonFolderBtn" Style="{StaticResource ButtonNoThickness}"
+                                Command="{Binding SelectFolderCommand}" CommandParameter="EtalonFolder">
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
 
+            <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource BorderBlackStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectTestFolderText" Style="{StaticResource SearchTextBlockStyle}"
+                               DataContext="{Binding EntryEntity}"
+                               Text="{Binding TestFolder, UpdateSourceTrigger=PropertyChanged}"
+                               Padding="2" />
+                    <Border Style="{StaticResource BorderLeftGray}">
+                        <Button Name="SelectTestFolderBtn" Style="{StaticResource ButtonNoThickness}"
+                                Command="{Binding SelectFolderCommand}" CommandParameter="TestFolder">
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
+                        </Button>
+                    </Border>
+                </StackPanel>
+            </Border>
+            <Border Grid.Row="4" Grid.Column="1" Style="{StaticResource BorderBlackStyle}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="SelectSavePathText" Style="{StaticResource SearchTextBlockStyle}"
+                               DataContext="{Binding EntryEntity}"
+                               Text="{Binding SavePath, UpdateSourceTrigger=PropertyChanged}"
+                               Padding="2" />
+                    <Border Style="{StaticResource BorderLeftGray}">
+                        <Button Name="SelectSavePathBtn" Style="{StaticResource ButtonNoThickness}"
+                                Command="{Binding SelectFolderCommand}" CommandParameter="SavePath">
+                            <Image Source="{StaticResource IconSearch}" Style="{StaticResource SearchIconStyle}" />
                         </Button>
                     </Border>
                 </StackPanel>
             </Border>
         </Grid>
 
-        <Grid Margin="0,10,0,0">
+        <Grid Margin="0,10,-7,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="0.13*" />
@@ -132,7 +171,7 @@
             <Grid Grid.Row="0" Grid.Column="0">
                 <ProgressBar Name="pbStatus" DataContext="{Binding EntryEntity}" Minimum="0" Maximum="100"
                              HorizontalAlignment="Stretch" Margin="7"
-                             Value="{Binding Progress, UpdateSourceTrigger=PropertyChanged}" />
+                             Value="{Binding Progress, UpdateSourceTrigger=PropertyChanged}" Cursor="Wait" />
                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Text>
                         <MultiBinding StringFormat="{}{2}: {0}/{1}%">
@@ -144,18 +183,13 @@
                 </TextBlock>
             </Grid>
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
-                <Button Content="Отменить" HorizontalContentAlignment="Center" HorizontalAlignment="Right"
-                        Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Top" FontSize="18"
+                <Button Content="Отменить" Style="{StaticResource StartStopButtonStyle}"
                         Command="{Binding StopCommand}"
-                        Visibility="{Binding Path=EntryEntity.StopVisible, UpdateSourceTrigger=PropertyChanged}"
-                        Cursor="Hand" />
-                <Button Content="Начать" HorizontalContentAlignment="Center" HorizontalAlignment="Right"
-                        Padding="5,5,5,5" Margin="0,7,5,5" VerticalAlignment="Top" FontSize="18"
+                        Visibility="{Binding Path=EntryEntity.StopVisible, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Content="Начать" Style="{StaticResource StartStopButtonStyle}"
                         Command="{Binding StartCommand}"
-                        Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}"
-                        Cursor="Hand" />
+                        Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
-
         </Grid>
     </StackPanel>
 </Window>

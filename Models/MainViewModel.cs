@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Forms;
 using tff.main.Commands;
+using tff.main.Extensions;
 using tff.main.Handlers;
 using MessageBox = System.Windows.Forms.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
@@ -15,14 +15,6 @@ namespace tff.main.Models;
 internal class MainViewModel : INotifyPropertyChanged
 {
     private readonly DocProcessHandler _docProcessHandler;
-
-    private readonly HashSet<string> _requiredProperties = new()
-    {
-        nameof(Entry.TargetFile),
-        nameof(Entry.EtalonFolder),
-        nameof(Entry.TestFolder),
-        nameof(Entry.SavePath),
-    };
 
     private SelectFileCommand _selectFileCommand;
 
@@ -49,22 +41,22 @@ internal class MainViewModel : INotifyPropertyChanged
         get
         {
             return _selectFolderCommand ??= new SelectFolderCommand(obj =>
-                       {
-                           var dialog = new FolderBrowserDialog
-                           {
-                               Description = "Выберите папку",
-                               UseDescriptionForTitle = true,
-                               ShowNewFolderButton = true,
-                           };
+                {
+                    var dialog = new FolderBrowserDialog
+                    {
+                        Description = "Выберите папку",
+                        UseDescriptionForTitle = true,
+                        ShowNewFolderButton = true,
+                    };
 
-                           var result = dialog.ShowDialog();
+                    var result = dialog.ShowDialog();
 
-                           if (result == DialogResult.OK)
-                           {
-                               SetPropertyValue(obj, dialog.SelectedPath);
-                           }
-                       }
-                   );
+                    if (result == DialogResult.OK)
+                    {
+                        SetPropertyValue(obj, dialog.SelectedPath);
+                    }
+                }
+            );
         }
     }
 
@@ -73,23 +65,39 @@ internal class MainViewModel : INotifyPropertyChanged
         get
         {
             return _selectFileCommand ??= new SelectFileCommand(obj =>
-                       {
-                           var dialog = new OpenFileDialog
-                           {
-                               AddExtension = true,
-                               CheckFileExists = true,
-                               Multiselect = false,
-                               Filter = "MS Word documents|*.docx;*.doc",
-                           };
+                {
+                    var filter = "MS Word documents|*.docx;*.doc";
+                    var command = obj;
 
-                           var result = dialog.ShowDialog();
+                    if (obj != null && obj.ToString()!.StartsWith('['))
+                    {
+                        var paramArray = (obj as string)?.Trim('[', ']').Split(',');
 
-                           if (result == true)
-                           {
-                               SetPropertyValue(obj, dialog.FileName);
-                           }
-                       }
-                   );
+                        if (paramArray is null)
+                        {
+                            throw new InvalidOperationException("Не переданы параметры фильтра файлов");
+                        }
+
+                        command = paramArray[0];
+                        filter = paramArray[1];
+                    }
+
+                    var dialog = new OpenFileDialog
+                    {
+                        AddExtension = true,
+                        CheckFileExists = true,
+                        Multiselect = false,
+                        Filter = filter,
+                    };
+
+                    var result = dialog.ShowDialog();
+
+                    if (result == true)
+                    {
+                        SetPropertyValue(command, dialog.FileName);
+                    }
+                }
+            );
         }
     }
 
@@ -98,22 +106,30 @@ internal class MainViewModel : INotifyPropertyChanged
         get
         {
             return _startCommand ??= new StartCommand(_ =>
-                       {
-                           if (EntryEntity.GetType()
-                               .GetProperties()
-                               .Any(propertyInfo => propertyInfo.PropertyType == typeof(string)
-                                                    && _requiredProperties.Contains(propertyInfo.Name)
-                                                    && propertyInfo.GetValue(EntryEntity) == null
-                               ))
-                           {
-                               MessageBox.Show("Заполните все поля", "Ошибка");
+                {
+                    var isWordOrSaveEmptyMsg =
+                        $"\"{EntryEntity.GetDisplayName(nameof(Entry.TargetFile))}\", \"{EntryEntity.GetDisplayName(nameof(Entry.SavePath))}\"";
 
-                               return;
-                           }
+                    var isXsdOrFoldersEmptyMsg =
+                        $"\"{EntryEntity.GetDisplayName(nameof(EntryEntity.TargetXsdFile))}\", \"{EntryEntity.GetDisplayName(nameof(EntryEntity.EtalonFolder))}\" или \"{EntryEntity.GetDisplayName(nameof(EntryEntity.TestFolder))}\"";
 
-                           _docProcessHandler.Execute();
-                       }
-                   );
+                    var isWordOrSaveEmpty = EntryEntity.TargetFile == null || EntryEntity.SavePath == null;
+
+                    var isXsdOrFoldersEmpty = EntryEntity.EtalonFolder == null
+                     && EntryEntity.TestFolder == null
+                     && EntryEntity.TargetXsdFile == null;
+
+                    if (isWordOrSaveEmpty || isXsdOrFoldersEmpty)
+                    {
+                        var result = isWordOrSaveEmpty ? isWordOrSaveEmptyMsg : isXsdOrFoldersEmptyMsg;
+                        MessageBox.Show($"Заполните следующие поля: {result}", "Ошибка");
+
+                        return;
+                    }
+
+                    _docProcessHandler.Execute();
+                }
+            );
         }
     }
 
@@ -129,12 +145,12 @@ internal class MainViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop));
     }
 
-    private PropertyInfo? GetProperty(string propertyName)
+    private PropertyInfo GetProperty(string propertyName)
     {
         return typeof(Entry).GetProperty(propertyName);
     }
 
-    private static T? ConvertArgument<T>(object obj)
+    private static T ConvertArgument<T>(object obj)
         where T : class
     {
         return obj as T;

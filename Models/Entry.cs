@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Windows;
 
@@ -12,12 +13,14 @@ public class Entry : INotifyPropertyChanged
     private string _savePath;
     private Visibility _startEnabled;
     private string _targetFile;
+    private string _targetXsdFile;
     private string _testFolder;
     private int _totalCount;
 
     /// <summary>
     ///     Файл для обработки
     /// </summary>
+    [Display(Name = "Файл для обработки")]
     public string TargetFile
     {
         get => _targetFile;
@@ -29,8 +32,23 @@ public class Entry : INotifyPropertyChanged
     }
 
     /// <summary>
+    ///     XSD схема
+    /// </summary>
+    [Display(Name = "XSD схема")]
+    public string TargetXsdFile
+    {
+        get => _targetXsdFile;
+        set
+        {
+            _targetXsdFile = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
     ///     Путь к папке с эталонными запросами и ответами
     /// </summary>
+    [Display(Name = "Путь к папке с эталонными запросами и ответами")]
     public string EtalonFolder
     {
         get => _etalonFolder;
@@ -44,6 +62,7 @@ public class Entry : INotifyPropertyChanged
     /// <summary>
     ///     Путь к папке с тестовыми сценариями
     /// </summary>
+    [Display(Name = "Путь к папке с тестовыми сценариями")]
     public string TestFolder
     {
         get => _testFolder;
@@ -57,6 +76,7 @@ public class Entry : INotifyPropertyChanged
     /// <summary>
     ///     Путь сохранения файла
     /// </summary>
+    [Display(Name = "Путь сохранения файла")]
     public string SavePath
     {
         get => _savePath;
@@ -70,6 +90,7 @@ public class Entry : INotifyPropertyChanged
     /// <summary>
     ///     Прогресс
     /// </summary>
+    [Display(Name = "Прогресс")]
     public int Progress
     {
         get => _progress;
@@ -80,6 +101,10 @@ public class Entry : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    ///     Текущий шаблон
+    /// </summary>
+    [Display(Name = "Текущий шаблон")]
     public string CurrentTemplate
     {
         get => _currentTemplate;
@@ -90,6 +115,10 @@ public class Entry : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    ///     Видимость кнопки Начать
+    /// </summary>
+    [Display(Name = "Видимость кнопки Начать")]
     public Visibility StartVisible
     {
         get => _startEnabled;
@@ -101,8 +130,16 @@ public class Entry : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    ///     Видимость кнопки Остановить
+    /// </summary>
+    [Display(Name = "Видимость кнопки Остановить")]
     public Visibility StopVisible => _startEnabled == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
 
+    /// <summary>
+    ///     Всего шаблонов
+    /// </summary>
+    [Display(Name = "Всего шаблонов")]
     public int TotalCount
     {
         get => _totalCount;
@@ -113,7 +150,7 @@ public class Entry : INotifyPropertyChanged
         }
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    public event PropertyChangedEventHandler PropertyChanged;
 
     public void OnPropertyChanged([CallerMemberName] string prop = "")
     {
