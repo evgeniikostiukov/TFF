@@ -145,7 +145,7 @@ public class DocProcessHandler
         );
 
         nextElement = InsertTitle(nextElement,
-            "Описание комплексных типов (при наличии)",
+            "Описание комплексных типов полей (при наличии)",
             "4.3",
             1,
             2,
@@ -536,7 +536,6 @@ public class DocProcessHandler
                     {
                         case XmlSchemaComplexType {Particle: { },} complexType:
                         {
-                            counter++;
 
                             var isComplex = string.IsNullOrEmpty(annotation);
 
@@ -545,8 +544,17 @@ public class DocProcessHandler
                                 annotation = GetAnnotation(complexType);
                             }
 
+                            if (string.IsNullOrEmpty(annotation))
+                            {
+                                complexes.Remove(xsdEntity);
+                                WalkChildNodes(parent, complexType.Particle, complexes, ref counter);
+                                continue;
+                            }
+
+                            counter++;
+
                             xsdEntity.Title =
-                                $"Описание {(isComplex ? "комплексного" : "составного")} элемента {name}{(string.IsNullOrEmpty(annotation) ? "" : $" ({annotation.Trim(':')})")}";
+                                $"Описание {(isComplex ? "комплексного" : "составного")} типа {name}{(string.IsNullOrEmpty(annotation) ? "" : $" ({annotation.Trim(':')})")}";
 
                             xsdEntity.TypeOrFillMethod = string.IsNullOrEmpty(type)
                                 ? isComplex ? "Комплексный элемент" : "Составной элемент"
