@@ -24,7 +24,7 @@ public class DocProcessHandler
     private readonly Entry _entry;
     private readonly Regex _etalonRequestPattern;
     private readonly Regex _etalonResponsePattern;
-    private readonly string _minfinUrn;
+    private string _minfinUrn;
     private readonly Regex _testPattern;
     private readonly Regex _xsdPattern;
     private BackgroundWorker _worker;
@@ -36,7 +36,6 @@ public class DocProcessHandler
         _etalonResponsePattern = new Regex("#a/\\d{1,}/response");
         _testPattern = new Regex("#b/\\d{1,}");
         _xsdPattern = new Regex("#xsd");
-        _minfinUrn = "urn://x-artefacts-minfin-unp/1.11.0";
         _entry = entry;
     }
 
@@ -100,6 +99,7 @@ public class DocProcessHandler
          ?? throw new InvalidOperationException("Невозможно прочитать файл XSD. Проверьте его корректность.");
 
         _entry.CurrentTemplate = "Подготовка данных...";
+        _minfinUrn = schema.TargetNamespace;
 
         var (xsdDescriptionsElements, xsdDescriptionsComplexes) = GetXsdDescriptions(schema);
 
@@ -144,7 +144,7 @@ public class DocProcessHandler
             ref counter
         );
 
-        nextElement = InsertTitle(nextElement,
+        nextElement = XsdExtension.InsertTitle(nextElement,
             "Описание комплексных типов полей (при наличии)",
             "4.3",
             1,
@@ -178,48 +178,7 @@ public class DocProcessHandler
         _entry.CurrentTemplate = "Сохранение файла...";
     }
 
-    private Paragraph InsertTitle(OpenXmlElement nextElement,
-        string title,
-        string number,
-        int level,
-        int styleId,
-        int numId)
-    {
-        var text = new Text();
-        var run = new Run();
-        var paragraph = new Paragraph();
-
-        var parStyle = new ParagraphStyleId
-        {
-            Val = $"{styleId}",
-        };
-
-        paragraph.ParagraphProperties = new ParagraphProperties
-        {
-            ParagraphStyleId = parStyle,
-            NumberingProperties = new NumberingProperties
-            {
-                NumberingLevelReference = new NumberingLevelReference
-                {
-                    Val = level,
-                },
-                NumberingId = new NumberingId
-                {
-                    Val = numId,
-                },
-            },
-        };
-
-        text.Text = title;
-        run.AppendChild(text);
-        paragraph.AppendChild(run);
-
-        nextElement.InsertAfterSelf(paragraph);
-
-        paragraph.AddBookmark(number);
-
-        return paragraph;
-    }
+    
 
     private void WalkNestedElements(ref OpenXmlElement nextElement,
         XsdDescription[] allElements,
@@ -249,7 +208,7 @@ public class DocProcessHandler
                 continue;
             }
 
-            var paragraph = InsertTitle(nextElement,
+            var paragraph = XsdExtension.InsertTitle(nextElement,
                 xsdDescription.Title,
                 xsdDescription.Number,
                 level,
@@ -396,7 +355,7 @@ public class DocProcessHandler
                     ++counter;
                     var name = element.Name ?? string.Empty;
                     var type = element.SchemaTypeName.IsEmpty ? string.Empty : element.SchemaTypeName.Name;
-                    var annotation = GetAnnotation(element);
+                    var annotation = XsdExtension.GetAnnotation(element);
 
                     var title = "Описание полей ";
 
@@ -433,7 +392,7 @@ public class DocProcessHandler
                 {
                     ++complexCounter;
 
-                    var annotation = GetAnnotation(complexType);
+                    var annotation = XsdExtension.GetAnnotation(complexType);
                     var name = complexType.Name ?? string.Empty;
                     var number = $"4.{counter + 1}.{complexCounter}";
                     var title = $"Описание комплексного элемента {name} ({annotation})";
@@ -495,7 +454,7 @@ public class DocProcessHandler
                 {
                     var name = element.Name ?? string.Empty;
 
-                    var annotation = GetAnnotation(element);
+                    var annotation = XsdExtension.GetAnnotation(element);
 
                     var type = element.SchemaTypeName.IsEmpty
                         ? string.Empty
@@ -536,18 +495,18 @@ public class DocProcessHandler
                     {
                         case XmlSchemaComplexType {Particle: { },} complexType:
                         {
-
                             var isComplex = string.IsNullOrEmpty(annotation);
 
                             if (isComplex)
                             {
-                                annotation = GetAnnotation(complexType);
+                                annotation = XsdExtension.GetAnnotation(complexType);
                             }
 
                             if (string.IsNullOrEmpty(annotation))
                             {
                                 complexes.Remove(xsdEntity);
                                 WalkChildNodes(parent, complexType.Particle, complexes, ref counter);
+
                                 continue;
                             }
 
@@ -630,12 +589,6 @@ public class DocProcessHandler
 
                     break;
             }
-    }
-
-    private string GetAnnotation(XmlSchemaAnnotated schemaObject)
-    {
-        return (schemaObject.Annotation?.Items[0] as XmlSchemaDocumentation)?.Markup?[0]?.Value?.TrimEnd(':')
-         ?? string.Empty;
     }
 
     #endregion

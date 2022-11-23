@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Schema;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using tff.main.Models;
@@ -292,7 +293,7 @@ public static class XsdExtension
         cell4.AppendChild(cellProperties4);
         cell5.AppendChild(cellProperties5);
         cell6.AppendChild(cellProperties6);
-        
+
         tablePara1.AddElementChild(tableRun1);
         tablePara2.AddElementChild(tableRun2);
         tablePara3.AddElementChild(tableRun3);
@@ -338,6 +339,49 @@ public static class XsdExtension
         tableRow.AppendChild(cell6);
 
         table.AppendChild(tableRow);
+    }
+
+    public static Paragraph InsertTitle(OpenXmlElement nextElement,
+        string title,
+        string number,
+        int level,
+        int styleId,
+        int numId)
+    {
+        var text = new Text();
+        var run = new Run();
+        var paragraph = new Paragraph();
+
+        var parStyle = new ParagraphStyleId
+        {
+            Val = $"{styleId}",
+        };
+
+        paragraph.ParagraphProperties = new ParagraphProperties
+        {
+            ParagraphStyleId = parStyle,
+            NumberingProperties = new NumberingProperties
+            {
+                NumberingLevelReference = new NumberingLevelReference
+                {
+                    Val = level,
+                },
+                NumberingId = new NumberingId
+                {
+                    Val = numId,
+                },
+            },
+        };
+
+        text.Text = title;
+        run.AppendChild(text);
+        paragraph.AppendChild(run);
+
+        nextElement.InsertAfterSelf(paragraph);
+
+        paragraph.AddBookmark(number);
+
+        return paragraph;
     }
 
     private static void AddElementChild<T>(this OpenXmlCompositeElement element, T child)
@@ -456,6 +500,14 @@ public static class XsdExtension
         }
 
         return parent != null ? WalkFindReference(elements, parent.Parent, findName) : null;
+    }
+
+    public static string GetAnnotation(XmlSchemaAnnotated schemaObject)
+    {
+        var documentationTag = schemaObject.Annotation?.Items[0] as XmlSchemaDocumentation;
+        var markup = documentationTag?.Markup?.Length > 0 ? documentationTag.Markup[0]?.Value?.TrimEnd(':') : string.Empty;
+
+        return markup;
     }
 
     private static (string fieldName, string method) GetFieldNameAndMethod(XsdDescription element)
