@@ -24,6 +24,8 @@ internal class MainViewModel : INotifyPropertyChanged
 
     private StopCommand _stopCommand;
 
+    private ClearCommand _clearCommand;
+
     public MainViewModel()
     {
         EntryEntity = new Entry
@@ -136,6 +138,21 @@ internal class MainViewModel : INotifyPropertyChanged
     public StopCommand StopCommand
     {
         get { return _stopCommand ??= new StopCommand(_ => { _docProcessHandler.worker_Stop(); }); }
+    }
+
+    public ClearCommand ClearCommand
+    {
+        get
+        {
+            return _clearCommand ??= new ClearCommand(obj =>
+            {
+                EntryEntity.TargetFile = null;
+                EntryEntity.TargetXsdFile = null;
+                EntryEntity.EtalonFolder = null;
+                EntryEntity.TestFolder = null;
+                EntryEntity.SavePath = null;
+            });
+        }
     }
 
     public event PropertyChangedEventHandler PropertyChanged;

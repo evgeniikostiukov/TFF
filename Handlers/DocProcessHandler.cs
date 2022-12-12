@@ -27,6 +27,7 @@ public class DocProcessHandler
     private string _minfinUrn;
     private readonly Regex _testPattern;
     private readonly Regex _xsdPattern;
+    private readonly Regex _xsdListPattern;
     private BackgroundWorker _worker;
 
     public DocProcessHandler(Entry entry)
@@ -36,6 +37,7 @@ public class DocProcessHandler
         _etalonResponsePattern = new Regex("#a/\\d{1,}/response");
         _testPattern = new Regex("#b/\\d{1,}");
         _xsdPattern = new Regex("#xsd");
+        _xsdListPattern = new Regex("#xsdListn");
         _entry = entry;
     }
 

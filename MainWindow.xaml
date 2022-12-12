@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:models="clr-namespace:tff.main.Models" d:DataContext="{d:DesignInstance Type=models:MainViewModel}"
         mc:Ignorable="d"
-        Title="ТФФ Builder" MaxWidth="1000" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight"
-        WindowStyle="ThreeDBorderWindow">
+        Title="ТФФ Builder" MaxWidth="1500" ResizeMode="CanMinimize" SizeToContent="WidthAndHeight"
+        WindowStyle="ThreeDBorderWindow" Width="1336">
     <Window.Resources>
         <BitmapImage UriSource="Content/icon-search.jpg" x:Shared="False" x:Key="IconSearch" />
         <Style x:Key="TextBoxStyle" TargetType="TextBlock">
@@ -24,8 +24,8 @@
         <Style x:Key="SearchTextBlockStyle" TargetType="TextBlock">
             <Setter Property="Background" Value="#E4E4E4" />
             <Setter Property="FontSize" Value="14" />
-            <Setter Property="MinWidth" Value="300px" />
-            <Setter Property="MaxWidth" Value="300px" />
+            <Setter Property="MinWidth" Value="350px" />
+            <Setter Property="MaxWidth" Value="350px" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="VerticalAlignment" Value="Stretch" />
             <Setter Property="TextWrapping" Value="WrapWithOverflow" />
@@ -188,6 +188,9 @@
                         Visibility="{Binding Path=EntryEntity.StopVisible, UpdateSourceTrigger=PropertyChanged}" />
                 <Button Content="Начать" Style="{StaticResource StartStopButtonStyle}"
                         Command="{Binding StartCommand}"
+                        Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}" />
+                <Button Content="Очистить" Style="{StaticResource StartStopButtonStyle}"
+                        Command="{Binding ClearCommand}"
                         Visibility="{Binding Path=EntryEntity.StartVisible, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
         </Grid>
