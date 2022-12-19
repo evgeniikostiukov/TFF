@@ -470,6 +470,10 @@ public static class XsdExtension
         }
     }
 
+    /// <summary>
+    /// Добавить в элементы ссылки на подразделы
+    /// </summary>
+    /// <param name="elements">Список всех элементов</param>
     public static void SetReferenceComment(XsdDescription[] elements)
     {
         var childs = elements.Where(x => x.Parent != null || x.TypeOrFillMethod == "Составной элемент");

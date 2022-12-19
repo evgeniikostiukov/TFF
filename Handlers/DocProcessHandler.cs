@@ -37,7 +37,7 @@ public class DocProcessHandler
         _etalonResponsePattern = new Regex("#a/\\d{1,}/response");
         _testPattern = new Regex("#b/\\d{1,}");
         _xsdPattern = new Regex("#xsd");
-        _xsdListPattern = new Regex("#xsdListn");
+        _xsdListPattern = new Regex("#xmlList");
         _entry = entry;
     }
 
@@ -49,9 +49,9 @@ public class DocProcessHandler
     private void ExecuteInternal(WordprocessingDocument newDoc)
     {
         var templateParagraphsQuery = newDoc.MainDocumentPart?.Document.Body?.ChildElements.Where(x =>
-                _etalonRequestPattern.IsMatch(x.InnerText)
-             || _etalonResponsePattern.IsMatch(x.InnerText)
-             || _testPattern.IsMatch(x.InnerText)
+                PatternMatch(_etalonRequestPattern, x.InnerText)
+             || PatternMatch(_etalonResponsePattern, x.InnerText)
+             || PatternMatch(_testPattern, x.InnerText)
             )
          ?? throw new InvalidOperationException(
                 "Нет шаблонов для заполнения. Проверьте исходный файл на существование шаблонов типа #a/1/method или #b/1"
@@ -59,11 +59,11 @@ public class DocProcessHandler
 
         if (_entry.EtalonFolder == null)
         {
-            templateParagraphsQuery = templateParagraphsQuery.Where(x => _testPattern.IsMatch(x.InnerText));
+            templateParagraphsQuery = templateParagraphsQuery.Where(x => PatternMatch(_testPattern, x.InnerText));
         }
         else if (_entry.TestFolder == null)
         {
-            templateParagraphsQuery = templateParagraphsQuery.Where(x => !_testPattern.IsMatch(x.InnerText));
+            templateParagraphsQuery = templateParagraphsQuery.Where(x => !PatternMatch(_testPattern, x.InnerText));
         }
 
         var templateParagraphs = templateParagraphsQuery.ToArray();
@@ -89,99 +89,120 @@ public class DocProcessHandler
     {
         using var fs = new FileStream(_entry.TargetXsdFile, FileMode.Open);
 
-        var reader = XmlReader.Create(fs,
+        using (var reader = XmlReader.Create(fs,
             new XmlReaderSettings
             {
                 IgnoreWhitespace = true,
                 IgnoreProcessingInstructions = true,
             }
-        );
-
-        var schema = XmlSchema.Read(reader, ValidationCallback)
-         ?? throw new InvalidOperationException("Невозможно прочитать файл XSD. Проверьте его корректность.");
-
-        _entry.CurrentTemplate = "Подготовка данных...";
-        _minfinUrn = schema.TargetNamespace;
-
-        var (xsdDescriptionsElements, xsdDescriptionsComplexes) = GetXsdDescriptions(schema);
-
-        OpenXmlElement nextElement;
-
-        if (xsdDescriptionsElements.Length > 0 && xsdDescriptionsComplexes.Length > 0)
+        ))
         {
-            _entry.TotalCount = xsdDescriptionsElements.Length + xsdDescriptionsComplexes.Length;
-            _entry.Progress = 0;
 
-            nextElement = newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
-                _xsdPattern.IsMatch(x.InnerText)
+            var schema = XmlSchema.Read(reader, ValidationCallback)
+             ?? throw new InvalidOperationException("Невозможно прочитать файл XSD. Проверьте его корректность.");
+            
+            _entry.CurrentTemplate = "Подготовка данных...";
+            _minfinUrn = schema.TargetNamespace;
+
+            var (xsdDescriptionsElements, xsdDescriptionsComplexes) = GetXsdDescriptions(schema);
+
+            OpenXmlElement nextElement;
+
+            if (xsdDescriptionsElements.Length > 0 && xsdDescriptionsComplexes.Length > 0)
+            {
+                _entry.TotalCount = xsdDescriptionsElements.Length + xsdDescriptionsComplexes.Length;
+                _entry.Progress = 0;
+
+                nextElement = newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
+                    _xsdPattern.IsMatch(x.InnerText)
+                );
+
+                if (nextElement == null)
+                {
+                    throw new InvalidOperationException($"Не найден шаблон {_xsdPattern} для XSD документа");
+                }
+
+                nextElement.GetFirstChild<Run>().Remove();
+            }
+            else
+            {
+                throw new InvalidOperationException("Не найдены элементы в файле XSD. Проверьте его корректность.");
+            }
+
+            var counter = 0;
+            var allElements = xsdDescriptionsElements.Concat(xsdDescriptionsComplexes).ToArray();
+
+            XsdExtension.SetReferenceComment(allElements);
+
+            var paragraphsWithHyperlink = new List<KeyValuePair<Paragraph, XsdDescription>>();
+
+            //элементы
+            WalkNestedElements(ref nextElement,
+                allElements,
+                paragraphsWithHyperlink,
+                xsdDescriptionsElements.Where(x => x.Parent == null).ToArray(),
+                1,
+                2,
+                5,
+                ref counter
             );
 
-            if (nextElement == null)
+            nextElement = XsdExtension.InsertTitle(nextElement,
+                "Описание комплексных типов полей (при наличии)",
+                "4.3",
+                1,
+                2,
+                5
+            );
+
+            //комплексные типы
+            WalkNestedElements(ref nextElement,
+                allElements,
+                paragraphsWithHyperlink,
+                xsdDescriptionsComplexes.Where(x => x.Parent == null).ToArray(),
+                0,
+                30,
+                10,
+                ref counter
+            );
+
+            foreach (var (child, parent) in paragraphsWithHyperlink)
             {
-                throw new InvalidOperationException($"Не найден шаблон {_xsdPattern} для XSD документа");
+                var run = child.GetFirstChild<Run>();
+
+                if (run == null)
+                {
+                    continue;
+                }
+
+                XsdExtension.AddHyperlink(run, parent.Number);
             }
-
-            nextElement.GetFirstChild<Run>().GetFirstChild<Text>().Text = "TUTA ZAMENA";
         }
-        else
-        {
-            throw new InvalidOperationException("Не найдены элементы в файле XSD. Проверьте его корректность.");
-        }
-
-        var counter = 0;
-        var allElements = xsdDescriptionsElements.Concat(xsdDescriptionsComplexes).ToArray();
-
-        XsdExtension.SetReferenceComment(allElements);
-
-        var paragraphsWithHyperlink = new List<KeyValuePair<Paragraph, XsdDescription>>();
-
-        //элементы
-        WalkNestedElements(ref nextElement,
-            allElements,
-            paragraphsWithHyperlink,
-            xsdDescriptionsElements.Where(x => x.Parent == null).ToArray(),
-            1,
-            2,
-            5,
-            ref counter
-        );
-
-        nextElement = XsdExtension.InsertTitle(nextElement,
-            "Описание комплексных типов полей (при наличии)",
-            "4.3",
-            1,
-            2,
-            5
-        );
-
-        //комплексные типы
-        WalkNestedElements(ref nextElement,
-            allElements,
-            paragraphsWithHyperlink,
-            xsdDescriptionsComplexes.Where(x => x.Parent == null).ToArray(),
-            0,
-            30,
-            10,
-            ref counter
-        );
-
-        foreach (var (child, parent) in paragraphsWithHyperlink)
-        {
-            var run = child.GetFirstChild<Run>();
-
-            if (run == null)
-            {
-                continue;
-            }
-
-            XsdExtension.AddHyperlink(run, parent.Number);
-        }
+        var xsdListing = newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x => PatternMatch(_xsdListPattern, x.InnerText));
+        fs.Seek(0, SeekOrigin.Begin);
+        var xmlDocument = new XmlDocument();
+        xmlDocument.Load(fs);
+        var element = XDocument.Parse(xmlDocument.OuterXml);
+        
+        InsertXsdText(xsdListing, element);
+        
 
         _entry.CurrentTemplate = "Сохранение файла...";
     }
 
     
 
+    /// <summary>
+    /// рекурсивный обход вложенных элементов
+    /// </summary>
+    /// <param name="nextElement">следующий элемент</param>
+    /// <param name="allElements">все элементы</param>
+    /// <param name="paragraphsWithHyperlink">список параграфов с ссылками</param>
+    /// <param name="elements">список элементов</param>
+    /// <param name="level">уровень вложенности</param>
+    /// <param name="styleId">Id задаваемого стиля</param>
+    /// <param name="numId">Id стиля нумерации</param>
+    /// <param name="progress">прогресс выполнения</param>
     private void WalkNestedElements(ref OpenXmlElement nextElement,
         XsdDescription[] allElements,
         List<KeyValuePair<Paragraph, XsdDescription>> paragraphsWithHyperlink,
@@ -338,6 +359,21 @@ public class DocProcessHandler
                 ref progress
             );
         }
+    }
+
+    private void InsertXsdText(OpenXmlElement openXmlElement, XDocument element)
+    {
+        if (openXmlElement is not Table t)
+        {
+            return;
+        }
+
+        var p = t.GetFirstChild<TableRow>().GetFirstChild<TableCell>().GetFirstChild<Paragraph>();
+        var text = t.InnerText;
+        _entry.CurrentTemplate = text;
+        p.RemoveAllChildren<Run>();
+
+        SetXml(p, element.Elements(), 0);
     }
 
     private static void ValidationCallback(object sender, ValidationEventArgs args) { }
@@ -604,10 +640,12 @@ public class DocProcessHandler
 
         foreach (var openXmlElement in templateParagraphs)
         {
-            if (openXmlElement is not Paragraph p)
+            if (openXmlElement is not Table t)
             {
                 continue;
             }
+
+            var p = t.GetFirstChild<TableRow>().GetFirstChild<TableCell>().GetFirstChild<Paragraph>();
 
             ProcessTemplate(p);
 
@@ -617,23 +655,25 @@ public class DocProcessHandler
 
     private ProcessType? ProcessMatch(string text)
     {
-        if (_etalonRequestPattern.IsMatch(text))
+        if (PatternMatch(_etalonRequestPattern, text))
         {
             return ProcessType.EtalonRequest;
         }
 
-        if (_etalonResponsePattern.IsMatch(text))
+        if (PatternMatch(_etalonResponsePattern, text))
         {
             return ProcessType.EtalonResponse;
         }
 
-        if (_testPattern.IsMatch(text))
+        if (PatternMatch(_testPattern, text))
         {
             return ProcessType.Test;
         }
 
         return null;
     }
+
+    private bool PatternMatch(Regex regex, string text) => regex.IsMatch(text);
 
     private XDocument GetXmlElement(string xmlPath)
     {
@@ -711,8 +751,8 @@ public class DocProcessHandler
             Val = "linkedBlue",
         };
 
-        blueTagStyle.Append(styleName1);
-        blueTagStyle.Append(linkedStyle1);
+        blueTagStyle.AppendChild(styleName1);
+        blueTagStyle.AppendChild(linkedStyle1);
         var runStyle = new StyleRunProperties();
 
         var color = new Color
@@ -723,6 +763,9 @@ public class DocProcessHandler
         var font = new RunFonts
         {
             Ascii = "Times New Roman",
+            EastAsia = "Times New Roman",
+            ComplexScript = "Times New Roman",
+            HighAnsi = "Times New Roman",
         };
 
         var fontSize = new FontSize
@@ -730,10 +773,10 @@ public class DocProcessHandler
             Val = "24",
         };
 
-        runStyle.Append(color);
-        runStyle.Append(font);
-        runStyle.Append(fontSize);
-        blueTagStyle.Append(runStyle);
+        runStyle.AppendChild(color);
+        runStyle.AppendChild(font);
+        runStyle.AppendChild(fontSize);
+        blueTagStyle.AppendChild(runStyle);
 
         #endregion
 
@@ -764,6 +807,9 @@ public class DocProcessHandler
         var font2 = new RunFonts
         {
             Ascii = "Times New Roman",
+            EastAsia = "Times New Roman",
+            ComplexScript = "Times New Roman",
+            HighAnsi = "Times New Roman",
         };
 
         var fontSize2 = new FontSize
@@ -771,18 +817,18 @@ public class DocProcessHandler
             Val = "24",
         };
 
-        plainTextStyle.Append(styleName2);
-        plainTextStyle.Append(linkedStyle2);
+        plainTextStyle.AppendChild(styleName2);
+        plainTextStyle.AppendChild(linkedStyle2);
         var runStyle2 = new StyleRunProperties();
-        runStyle2.Append(color2);
-        runStyle2.Append(font2);
-        runStyle2.Append(fontSize2);
-        plainTextStyle.Append(runStyle2);
+        runStyle2.AppendChild(color2);
+        runStyle2.AppendChild(font2);
+        runStyle2.AppendChild(fontSize2);
+        plainTextStyle.AppendChild(runStyle2);
 
         #endregion
 
-        styles?.Append(plainTextStyle);
-        styles?.Append(blueTagStyle);
+        styles?.AppendChild(plainTextStyle);
+        styles?.AppendChild(blueTagStyle);
     }
 
     private void SetXml(Paragraph p, IEnumerable<XElement> elements, int level)
@@ -802,7 +848,7 @@ public class DocProcessHandler
             newtext.Space = SpaceProcessingModeValues.Preserve;
 
             newtext.Text =
-                $"{new string(' ', indent)}<{elem.Name.LocalName}{(elem.Attributes().Any() ? " " : "")}{string.Join(" ", elem.Attributes())}>";
+                $"{new string(' ', indent)}<{elem.Name.LocalName}{(elem.Attributes().Any() ? " " : "")}{string.Join(" ", elem.Attributes())}";
 
             if (level > 0)
             {
@@ -814,22 +860,50 @@ public class DocProcessHandler
 
             SetXml(p, elem.Elements(), level + 1);
 
-            if (!elem.Elements().Any() && elem.Value != null)
+            //если есть внутри элементы
+            if (elem.HasElements)
             {
-                newtext = new Text();
-                newrun = new Run();
-                runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
+                newtext.Text += ">";
+            }
+            //если внутри нет элементов и есть текст
+            else if (!elem.HasElements && !string.IsNullOrWhiteSpace(elem.Value))
+            {
+                newtext.Text += ">";
+                var innerTextArray = elem.Value.Split('\n');
 
-                runProp.RunStyle = new RunStyle
+                for (var i = 0; i < innerTextArray.Length; i++)
                 {
-                    Val = "plainText",
-                };
+                    var textPart = TrimAllChars(innerTextArray[i], ' ', '\r', '\n');
+                    newtext = new Text();
+                    newrun = new Run();
+                    runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
 
-                newtext.Space = SpaceProcessingModeValues.Preserve;
-                newtext.Text = elem.Value;
-                newrun.Append(newtext);
-                p.Append(newrun);
-                indent = 0;
+                    runProp.RunStyle = new RunStyle
+                    {
+                        Val = "plainText",
+                    };
+
+                    newtext.Text = textPart;
+                    newrun.Append(newtext);
+
+                    if (i != innerTextArray.Length - 1 && !string.IsNullOrWhiteSpace(textPart))
+                    {
+                        newrun.Append(new Break());
+                    }
+
+                    p.Append(newrun);
+                }
+
+                if(innerTextArray.Length==1)
+                    indent = 0;
+                
+            }
+            //если нет элементов и текста
+            else if (!elem.HasElements && string.IsNullOrWhiteSpace(elem.Value))
+            {
+                newtext.Text += " />";
+                
+                continue;
             }
 
             newtext = new Text();
@@ -856,6 +930,20 @@ public class DocProcessHandler
     }
 
     #endregion
+
+    private string TrimAllChars(string text, params char[] replacedChars)
+    {
+        foreach (var replacedChar in replacedChars)
+        {
+            if (text.StartsWith(replacedChar) || text.EndsWith(replacedChar))
+            {
+                text = text.Trim(replacedChar);
+                TrimAllChars(text, replacedChar);
+            }
+        }
+
+        return text;
+    }
 
     #region Worker
 
@@ -904,7 +992,7 @@ public class DocProcessHandler
     private WordprocessingDocument GetNewWordDocument()
     {
         var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
-        var newFilePath = $"{_entry.SavePath}\\{fileInfo.Name.Split(".")[0]}_ГОТОВЫЙ{fileInfo.Extension}";
+        var newFilePath = $"{_entry.SavePath}\\Готовый_{DateTime.Now.ToString("yy-MM-dd:t")}_{fileInfo.Name.Split(".")[0]}{fileInfo.Extension}";
 
         var oldDoc = WordprocessingDocument.Open(_entry.TargetFile,
             false,
