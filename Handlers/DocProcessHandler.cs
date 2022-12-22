@@ -199,9 +199,9 @@ public class DocProcessHandler
 
         SetNamespaceUrn(namespaceUrnArray);
 
-        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
+        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.Where(x =>
                 PatternMatch(_versionPattern, x.InnerText)
-            ),
+            ).ToArray(),
             GetVersion()
         );
         
@@ -210,40 +210,43 @@ public class DocProcessHandler
 
     private string GetVersion() => _minfinUrn.Split('/')[^1];
 
-    private void SetVersion(OpenXmlElement element, string version)
+    private void SetVersion(OpenXmlElement[] elements, string version)
     {
-        if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
+        foreach (var element in elements)
         {
-            return;
-        }
-        
-        p.RemoveAllChildren<Run>();
-
-        var run = new Run(new Text($"Версия: {version}"));
-
-        run.RunProperties ??= new RunProperties
-        {
-            Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
-            FontSize = new FontSize
+            if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
             {
-                Val = "24",
-            },
-            RunFonts = new RunFonts
-            {
-                Ascii = "Times New Roman",
-                ComplexScript = "Times New Roman",
-                EastAsia = "Times New Roman",
-                HighAnsi = "Times New Roman",
-            },
-        };
+                return;
+            }
 
-        p.Append(run,
-            new Run(new Break
+            p.RemoveAllChildren<Run>();
+
+            var run = new Run(new Text($"Версия: {version}"));
+
+            run.RunProperties ??= new RunProperties
+            {
+                Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
+                FontSize = new FontSize
                 {
-                    Type = new EnumValue<BreakValues>(BreakValues.Page),
-                }
-            )
-        );
+                    Val = "24",
+                },
+                RunFonts = new RunFonts
+                {
+                    Ascii = "Times New Roman",
+                    ComplexScript = "Times New Roman",
+                    EastAsia = "Times New Roman",
+                    HighAnsi = "Times New Roman",
+                },
+            };
+
+            p.Append(run,
+                new Run(new Break
+                    {
+                        Type = new EnumValue<BreakValues>(BreakValues.Page),
+                    }
+                )
+            );
+        }
     }
 
     private void SetNamespaceUrn(OpenXmlElement[] elements)
