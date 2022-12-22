@@ -31,6 +31,7 @@ public class DocProcessHandler
     private readonly Regex _urnPathPattern;
     private readonly Regex _numTestPattern;
     private readonly Regex _versionPattern;
+    private readonly Regex _xsdVersionPattern;
     private BackgroundWorker _worker;
 
     public DocProcessHandler(Entry entry)
@@ -44,6 +45,7 @@ public class DocProcessHandler
         _urnPathPattern = new Regex("#urn");
         _numTestPattern = new Regex("#num_test");
         _versionPattern = new Regex("#version");
+        _xsdVersionPattern = new Regex("#xsdVersion");
         _entry = entry;
     }
 
@@ -199,54 +201,69 @@ public class DocProcessHandler
 
         SetNamespaceUrn(namespaceUrnArray);
 
-        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.Where(x =>
+        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
                 PatternMatch(_versionPattern, x.InnerText)
-            ).ToArray(),
+            ),
             GetVersion()
         );
+
+        SetXsdVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
+                PatternMatch(_versionPattern, x.InnerText)
+            ),
+            GetVersion());
         
         _entry.CurrentTemplate = "Сохранение файла...";
     }
 
     private string GetVersion() => _minfinUrn.Split('/')[^1];
 
-    private void SetVersion(OpenXmlElement[] elements, string version)
+    private void SetXsdVersion(OpenXmlElement element, string version)
     {
-        foreach (var element in elements)
+        if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
         {
-            if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
-            {
-                return;
-            }
-
-            p.RemoveAllChildren<Run>();
-
-            var run = new Run(new Text($"Версия: {version}"));
-
-            run.RunProperties ??= new RunProperties
-            {
-                Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
-                FontSize = new FontSize
-                {
-                    Val = "24",
-                },
-                RunFonts = new RunFonts
-                {
-                    Ascii = "Times New Roman",
-                    ComplexScript = "Times New Roman",
-                    EastAsia = "Times New Roman",
-                    HighAnsi = "Times New Roman",
-                },
-            };
-
-            p.Append(run,
-                new Run(new Break
-                    {
-                        Type = new EnumValue<BreakValues>(BreakValues.Page),
-                    }
-                )
-            );
+            return;
         }
+
+        p.ChildElements.FirstOrDefault(x => PatternMatch(_xsdVersionPattern, x.InnerText))?.Remove();
+
+        var run = new Run(new Text(version));
+        p.Append(run);
+    }
+    
+    private void SetVersion(OpenXmlElement element, string version)
+    {
+        if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
+        {
+            return;
+        }
+
+        p.RemoveAllChildren<Run>();
+
+        var run = new Run(new Text($"Версия: {version}"));
+
+        run.RunProperties ??= new RunProperties
+        {
+            Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
+            FontSize = new FontSize
+            {
+                Val = "24",
+            },
+            RunFonts = new RunFonts
+            {
+                Ascii = "Times New Roman",
+                ComplexScript = "Times New Roman",
+                EastAsia = "Times New Roman",
+                HighAnsi = "Times New Roman",
+            },
+        };
+
+        p.Append(run,
+            new Run(new Break
+                {
+                    Type = new EnumValue<BreakValues>(BreakValues.Page),
+                }
+            )
+        );
     }
 
     private void SetNamespaceUrn(OpenXmlElement[] elements)
