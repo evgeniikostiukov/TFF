@@ -28,6 +28,9 @@ public class DocProcessHandler
     private readonly Regex _testPattern;
     private readonly Regex _xsdPattern;
     private readonly Regex _xsdListPattern;
+    private readonly Regex _urnPathPattern;
+    private readonly Regex _numTestPattern;
+    private readonly Regex _versionPattern;
     private BackgroundWorker _worker;
 
     public DocProcessHandler(Entry entry)
@@ -38,6 +41,9 @@ public class DocProcessHandler
         _testPattern = new Regex("#b/\\d{1,}");
         _xsdPattern = new Regex("#xsd");
         _xsdListPattern = new Regex("#xmlList");
+        _urnPathPattern = new Regex("#urn");
+        _numTestPattern = new Regex("#num_test");
+        _versionPattern = new Regex("#version");
         _entry = entry;
     }
 
@@ -178,19 +184,99 @@ public class DocProcessHandler
                 XsdExtension.AddHyperlink(run, parent.Number);
             }
         }
+        
         var xsdListing = newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x => PatternMatch(_xsdListPattern, x.InnerText));
         fs.Seek(0, SeekOrigin.Begin);
         var xmlDocument = new XmlDocument();
         xmlDocument.Load(fs);
         var element = XDocument.Parse(xmlDocument.OuterXml);
         
-        InsertXsdText(xsdListing, element);
-        
+        InsertXsdInnerText(xsdListing, element);
 
+        var namespaceUrnArray = newDoc.MainDocumentPart?.Document.Body?.ChildElements
+           .Where(x => PatternMatch(_urnPathPattern, x.InnerText))
+           .ToArray();
+
+        SetNamespaceUrn(namespaceUrnArray);
+
+        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
+                PatternMatch(_versionPattern, x.InnerText)
+            ),
+            GetVersion()
+        );
+        
         _entry.CurrentTemplate = "Сохранение файла...";
     }
 
-    
+    private string GetVersion() => _minfinUrn.Split('/')[^1];
+
+    private void SetVersion(OpenXmlElement element, string version)
+    {
+        if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
+        {
+            return;
+        }
+        
+        p.RemoveAllChildren<Run>();
+
+        var run = new Run(new Text($"Версия: {version}"));
+
+        run.RunProperties ??= new RunProperties
+        {
+            Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
+            FontSize = new FontSize
+            {
+                Val = "24",
+            },
+            RunFonts = new RunFonts
+            {
+                Ascii = "Times New Roman",
+                ComplexScript = "Times New Roman",
+                EastAsia = "Times New Roman",
+                HighAnsi = "Times New Roman",
+            },
+        };
+
+        p.Append(run,
+            new Run(new Break
+                {
+                    Type = new EnumValue<BreakValues>(BreakValues.Page),
+                }
+            )
+        );
+    }
+
+    private void SetNamespaceUrn(OpenXmlElement[] elements)
+    {
+        _entry.CurrentTemplate = _urnPathPattern.ToString();
+        
+        foreach (var openXmlElement in elements)
+        {
+            if (openXmlElement is Table t)
+            {
+                var p = t.ChildElements.FirstOrDefault(x=> _urnPathPattern.IsMatch(x.InnerText))
+                  ?.ChildElements.FirstOrDefault(x => _urnPathPattern.IsMatch(x.InnerText))?
+                   .GetFirstChild<Paragraph>();
+                
+                p?.RemoveAllChildren<Run>();
+
+                var run = new Run();
+                var text = new Text();
+
+                run.RunProperties = new RunProperties
+                {
+                    RunStyle = new RunStyle
+                    {
+                        Val = "plainText",
+                    },
+                };
+
+                text.Text = _minfinUrn;
+                run.Append(text);
+                p.Append(run);
+            }
+        }
+    }
 
     /// <summary>
     /// рекурсивный обход вложенных элементов
@@ -361,7 +447,7 @@ public class DocProcessHandler
         }
     }
 
-    private void InsertXsdText(OpenXmlElement openXmlElement, XDocument element)
+    private void InsertXsdInnerText(OpenXmlElement openXmlElement, XDocument element)
     {
         if (openXmlElement is not Table t)
         {
@@ -373,7 +459,7 @@ public class DocProcessHandler
         _entry.CurrentTemplate = text;
         p.RemoveAllChildren<Run>();
 
-        SetXml(p, element.Elements(), 0);
+        SetXml(p, element.Elements(), 0, false);
     }
 
     private static void ValidationCallback(object sender, ValidationEventArgs args) { }
@@ -645,6 +731,11 @@ public class DocProcessHandler
                 continue;
             }
 
+            if (_worker.CancellationPending)
+            {
+                break;
+            }
+
             var p = t.GetFirstChild<TableRow>().GetFirstChild<TableCell>().GetFirstChild<Paragraph>();
 
             ProcessTemplate(p);
@@ -703,14 +794,40 @@ public class DocProcessHandler
     private void ProcessTemplate(Paragraph p)
     {
         var text = p.InnerText;
+        var xmlNumber = text.Split("/")[1];
         _entry.CurrentTemplate = text;
 
         p.RemoveAllChildren<Run>();
 
         var processType = ProcessMatch(text) ?? throw new Exception("Не найден вид шаблона");
-        var xmlPath = GetXmlPath(text.Split("/")[1], processType);
+        var xmlPath = GetXmlPath(xmlNumber, processType);
         var element = GetXmlElement(xmlPath);
         SetXml(p, element.Elements(), 0);
+
+        var testTable = p.Parent.Parent.Parent.NextSibling<Table>();
+
+        if (processType != ProcessType.Test)
+        {
+            return;
+        }
+
+        var paragraph = testTable.ChildElements.FirstOrDefault(x => _numTestPattern.IsMatch(x.InnerText))
+          ?.ChildElements.FirstOrDefault(x => _numTestPattern.IsMatch(x.InnerText))
+          ?.GetFirstChild<Paragraph>();
+
+        paragraph?.RemoveAllChildren<Run>();
+
+        var run = new Run(new Text($"ответ - {xmlNumber}.xls"));
+
+        run.RunProperties ??= new RunProperties
+        {
+            RunStyle = new RunStyle
+            {
+                Val = "plainText",
+            },
+        };
+
+        paragraph?.Append(run);
     }
 
     private void InitStyles(WordprocessingDocument newDoc)
@@ -831,7 +948,7 @@ public class DocProcessHandler
         styles?.AppendChild(blueTagStyle);
     }
 
-    private void SetXml(Paragraph p, IEnumerable<XElement> elements, int level)
+    private void SetXml(Paragraph p, IEnumerable<XElement> elements, int level, bool localName = true)
     {
         foreach (var elem in elements)
         {
@@ -839,6 +956,7 @@ public class DocProcessHandler
             var newtext = new Text();
             var newrun = new Run();
             var runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
+            var elementName = localName ? elem.Name.LocalName : "xs:" + elem.Name.LocalName;
 
             runProp.RunStyle = new RunStyle
             {
@@ -848,7 +966,7 @@ public class DocProcessHandler
             newtext.Space = SpaceProcessingModeValues.Preserve;
 
             newtext.Text =
-                $"{new string(' ', indent)}<{elem.Name.LocalName}{(elem.Attributes().Any() ? " " : "")}{string.Join(" ", elem.Attributes())}";
+                $"{new string(' ', indent)}<{elementName}{(elem.Attributes().Any() ? " " : "")}{string.Join(" ", elem.Attributes())}";
 
             if (level > 0)
             {
@@ -917,7 +1035,7 @@ public class DocProcessHandler
                 Val = "blueTag",
             };
 
-            newtext.Text = $"{new string(' ', indent)}</{elem.Name.LocalName}>";
+            newtext.Text = $"{new string(' ', indent)}</{elementName}>";
 
             if (elem.Elements().Any())
             {
@@ -992,7 +1110,7 @@ public class DocProcessHandler
     private WordprocessingDocument GetNewWordDocument()
     {
         var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
-        var newFilePath = $"{_entry.SavePath}\\Готовый_{DateTime.Now.ToString("yy-MM-dd:t")}_{fileInfo.Name.Split(".")[0]}{fileInfo.Extension}";
+        var newFilePath = $"{_entry.SavePath}\\Готовый_{DateTime.Now.ToString("yyyy'_'MM'_'dd'-'HH'_'mm'_'ss")}_{fileInfo.Name.Split(".")[0]}{fileInfo.Extension}";
 
         var oldDoc = WordprocessingDocument.Open(_entry.TargetFile,
             false,
