@@ -57,13 +57,13 @@ public class DocProcessHandler
     private void ExecuteInternal(WordprocessingDocument newDoc)
     {
         var templateParagraphsQuery = newDoc.MainDocumentPart?.Document.Body?.ChildElements.Where(x =>
-                PatternMatch(_etalonRequestPattern, x.InnerText)
-             || PatternMatch(_etalonResponsePattern, x.InnerText)
-             || PatternMatch(_testPattern, x.InnerText)
-            )
-         ?? throw new InvalidOperationException(
-                "Нет шаблонов для заполнения. Проверьте исходный файл на существование шаблонов типа #a/1/method или #b/1"
-            );
+                                          PatternMatch(_etalonRequestPattern, x.InnerText)
+                                          || PatternMatch(_etalonResponsePattern, x.InnerText)
+                                          || PatternMatch(_testPattern, x.InnerText)
+                                      )
+                                      ?? throw new InvalidOperationException(
+                                          "Нет шаблонов для заполнения. Проверьте исходный файл на существование шаблонов типа #a/1/method или #b/1"
+                                      );
 
         if (_entry.EtalonFolder == null)
         {
@@ -98,17 +98,17 @@ public class DocProcessHandler
         using var fs = new FileStream(_entry.TargetXsdFile, FileMode.Open);
 
         using (var reader = XmlReader.Create(fs,
-            new XmlReaderSettings
-            {
-                IgnoreWhitespace = true,
-                IgnoreProcessingInstructions = true,
-            }
-        ))
+                   new XmlReaderSettings
+                   {
+                       IgnoreWhitespace = true,
+                       IgnoreProcessingInstructions = true,
+                   }
+               ))
         {
-
             var schema = XmlSchema.Read(reader, ValidationCallback)
-             ?? throw new InvalidOperationException("Невозможно прочитать файл XSD. Проверьте его корректность.");
-            
+                         ?? throw new InvalidOperationException(
+                             "Невозможно прочитать файл XSD. Проверьте его корректность.");
+
             _entry.CurrentTemplate = "Подготовка данных...";
             _minfinUrn = schema.TargetNamespace;
 
@@ -186,18 +186,20 @@ public class DocProcessHandler
                 XsdExtension.AddHyperlink(run, parent.Number);
             }
         }
-        
-        var xsdListing = newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x => PatternMatch(_xsdListPattern, x.InnerText));
+
+        var xsdListing =
+            newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
+                PatternMatch(_xsdListPattern, x.InnerText));
         fs.Seek(0, SeekOrigin.Begin);
         var xmlDocument = new XmlDocument();
         xmlDocument.Load(fs);
         var element = XDocument.Parse(xmlDocument.OuterXml);
-        
+
         InsertXsdInnerText(xsdListing, element);
 
         var namespaceUrnArray = newDoc.MainDocumentPart?.Document.Body?.ChildElements
-           .Where(x => PatternMatch(_urnPathPattern, x.InnerText))
-           .ToArray();
+            .Where(x => PatternMatch(_urnPathPattern, x.InnerText))
+            .ToArray();
 
         SetNamespaceUrn(namespaceUrnArray);
 
@@ -208,10 +210,10 @@ public class DocProcessHandler
         );
 
         SetXsdVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
-                PatternMatch(_versionPattern, x.InnerText)
+                PatternMatch(_xsdVersionPattern, x.InnerText)
             ),
             GetVersion());
-        
+
         _entry.CurrentTemplate = "Сохранение файла...";
     }
 
@@ -224,12 +226,13 @@ public class DocProcessHandler
             return;
         }
 
-        p.ChildElements.FirstOrDefault(x => PatternMatch(_xsdVersionPattern, x.InnerText))?.Remove();
+        var neighbourElement = p.ChildElements.FirstOrDefault(x => PatternMatch(_xsdVersionPattern, x.InnerText));
 
+        neighbourElement?.Remove();
         var run = new Run(new Text(version));
-        p.Append(run);
+        neighbourElement?.InsertAfterSelf(run);
     }
-    
+
     private void SetVersion(OpenXmlElement element, string version)
     {
         if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
@@ -269,15 +272,15 @@ public class DocProcessHandler
     private void SetNamespaceUrn(OpenXmlElement[] elements)
     {
         _entry.CurrentTemplate = _urnPathPattern.ToString();
-        
+
         foreach (var openXmlElement in elements)
         {
             if (openXmlElement is Table t)
             {
-                var p = t.ChildElements.FirstOrDefault(x=> _urnPathPattern.IsMatch(x.InnerText))
-                  ?.ChildElements.FirstOrDefault(x => _urnPathPattern.IsMatch(x.InnerText))?
-                   .GetFirstChild<Paragraph>();
-                
+                var p = t.ChildElements.FirstOrDefault(x => _urnPathPattern.IsMatch(x.InnerText))
+                    ?.ChildElements.FirstOrDefault(x => _urnPathPattern.IsMatch(x.InnerText))?
+                    .GetFirstChild<Paragraph>();
+
                 p?.RemoveAllChildren<Run>();
 
                 var run = new Run();
@@ -482,7 +485,9 @@ public class DocProcessHandler
         SetXml(p, element.Elements(), 0, false);
     }
 
-    private static void ValidationCallback(object sender, ValidationEventArgs args) { }
+    private static void ValidationCallback(object sender, ValidationEventArgs args)
+    {
+    }
 
     private (XsdDescription[], XsdDescription[]) GetXsdDescriptions(XmlSchema schema)
     {
@@ -626,7 +631,8 @@ public class DocProcessHandler
                         Comment = comment,
                     };
 
-                    if (element.SchemaType is XmlSchemaComplexType {Particle: { },} && !string.IsNullOrEmpty(annotation))
+                    if (element.SchemaType is XmlSchemaComplexType {Particle: { },} &&
+                        !string.IsNullOrEmpty(annotation))
                     {
                         complexes.Add(xsdEntity);
                     }
@@ -832,8 +838,8 @@ public class DocProcessHandler
         }
 
         var paragraph = testTable.ChildElements.FirstOrDefault(x => _numTestPattern.IsMatch(x.InnerText))
-          ?.ChildElements.FirstOrDefault(x => _numTestPattern.IsMatch(x.InnerText))
-          ?.GetFirstChild<Paragraph>();
+            ?.ChildElements.FirstOrDefault(x => _numTestPattern.IsMatch(x.InnerText))
+            ?.GetFirstChild<Paragraph>();
 
         paragraph?.RemoveAllChildren<Run>();
 
@@ -1032,15 +1038,14 @@ public class DocProcessHandler
                     p.Append(newrun);
                 }
 
-                if(innerTextArray.Length==1)
+                if (innerTextArray.Length == 1)
                     indent = 0;
-                
             }
             //если нет элементов и текста
             else if (!elem.HasElements && string.IsNullOrWhiteSpace(elem.Value))
             {
                 newtext.Text += " />";
-                
+
                 continue;
             }
 
@@ -1130,7 +1135,8 @@ public class DocProcessHandler
     private WordprocessingDocument GetNewWordDocument()
     {
         var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
-        var newFilePath = $"{_entry.SavePath}\\Готовый_{DateTime.Now.ToString("yyyy'_'MM'_'dd'-'HH'_'mm'_'ss")}_{fileInfo.Name.Split(".")[0]}{fileInfo.Extension}";
+        var newFilePath =
+            $"{_entry.SavePath}\\Готовый_{DateTime.Now.ToString("yyyy'_'MM'_'dd'-'HH'_'mm'_'ss")}_{fileInfo.Name.Split(".")[0]}{fileInfo.Extension}";
 
         var oldDoc = WordprocessingDocument.Open(_entry.TargetFile,
             false,
@@ -1145,15 +1151,15 @@ public class DocProcessHandler
         );
 
         using (oldDoc.Clone(newFilePath,
-                false,
-                new OpenSettings
-                {
-                    MarkupCompatibilityProcessSettings =
-                        new MarkupCompatibilityProcessSettings(MarkupCompatibilityProcessMode.ProcessAllParts,
-                            FileFormatVersions.Office2010
-                        ),
-                }
-            ))
+                   false,
+                   new OpenSettings
+                   {
+                       MarkupCompatibilityProcessSettings =
+                           new MarkupCompatibilityProcessSettings(MarkupCompatibilityProcessMode.ProcessAllParts,
+                               FileFormatVersions.Office2010
+                           ),
+                   }
+               ))
         {
             oldDoc.Dispose();
         }
