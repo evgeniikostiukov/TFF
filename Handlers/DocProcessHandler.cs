@@ -94,7 +94,7 @@ public class DocProcessHandler
 
     #region XSD
 
-    private void ExecuteInternalXsd(WordprocessingDocument newDoc, int abstractNumId, int numId)
+    private void ExecuteInternalXsd(WordprocessingDocument newDoc)
     {
         using var fs = new FileStream(_entry.TargetXsdFile, FileMode.Open);
 
@@ -300,7 +300,7 @@ public class DocProcessHandler
 
                 text.Text = _minfinUrn;
                 run.Append(text);
-                p.Append(run);
+                p?.Append(run);
             }
         }
     }
@@ -337,7 +337,6 @@ public class DocProcessHandler
 
             var childs = allElements.Where(x => x.Parent == xsdDescription);
             var xsdDescriptions = childs as XsdDescription[] ?? childs.ToArray();
-            childs = Array.Empty<object>() as IEnumerable<XsdDescription>;
 
             if (!xsdDescriptions.Any() || nextElement == null)
             {
@@ -349,8 +348,6 @@ public class DocProcessHandler
                 xsdDescription.Number,
                 level,
                 styleId,
-                // numId
-                // styleId,
                 numId
             );
 
@@ -492,8 +489,7 @@ public class DocProcessHandler
     }
 
     private static void ValidationCallback(object sender, ValidationEventArgs args)
-    {
-    }
+    { }
 
     private (XsdDescription[], XsdDescription[]) GetXsdDescriptions(XmlSchema schema)
     {
@@ -637,8 +633,7 @@ public class DocProcessHandler
                         Comment = comment,
                     };
 
-                    if (element.SchemaType is XmlSchemaComplexType {Particle: { },} &&
-                        !string.IsNullOrEmpty(annotation))
+                    if (element.SchemaType is XmlSchemaComplexType {Particle: { },} && !string.IsNullOrEmpty(annotation))
                     {
                         complexes.Add(xsdEntity);
                     }
@@ -816,10 +811,10 @@ public class DocProcessHandler
 
         return processType switch
         {
-            ProcessType.EtalonRequest => $"{_entry.EtalonFolder}/{xmlNumber}/Request.xml",
+            ProcessType.EtalonRequest  => $"{_entry.EtalonFolder}/{xmlNumber}/Request.xml",
             ProcessType.EtalonResponse => $"{_entry.EtalonFolder}/{xmlNumber}/Response.xml",
-            ProcessType.Test => $"{_entry.TestFolder}/{xmlNumber}.xsl",
-            _ => string.Empty,
+            ProcessType.Test           => $"{_entry.TestFolder}/{xmlNumber}.xsl",
+            _                          => string.Empty,
         };
     }
 
@@ -873,20 +868,20 @@ public class DocProcessHandler
 
             if (part == null)
             {
-                return (-1,-1);
+                return (-1, -1);
             }
 
             var root = new Styles();
             root.Save(part);
         }
-        
+
         if (numPart == null)
         {
-            numPart = newDoc?.MainDocumentPart?.AddNewPart<NumberingDefinitionsPart>();
+            numPart = newDoc.MainDocumentPart?.AddNewPart<NumberingDefinitionsPart>();
 
             if (numPart == null)
             {
-                return(-1,-1);
+                return (-1, -1);
             }
 
             var root = new Numbering();
@@ -994,102 +989,103 @@ public class DocProcessHandler
         #region Numbering 4
 
         var lastAbstractNumber = numStyles.Elements<AbstractNum>().Count() + 1;
-        
+
         var lastNumNumber = numStyles.Elements<NumberingInstance>().Count() + 1;
 
-        var numberingInstance = new NumberingInstance(new AbstractNumId() {Val = lastAbstractNumber}) {NumberID = lastNumNumber};
+        var numberingInstance = new NumberingInstance(new AbstractNumId
+            {Val = lastAbstractNumber}) {NumberID = lastNumNumber};
 
         var abstractNumbering = new AbstractNum(
-            new MultiLevelType()
+            new MultiLevelType
             {
                 Val = new EnumValue<MultiLevelValues>(MultiLevelValues.Multilevel)
             },
-            new Level()
+            new Level
             {
                 LevelIndex = 0,
-                StartNumberingValue = new StartNumberingValue()
+                StartNumberingValue = new StartNumberingValue
                 {
                     Val = 4
                 },
-                NumberingFormat = new NumberingFormat()
+                NumberingFormat = new NumberingFormat
                 {
                     Val = new EnumValue<NumberFormatValues>(NumberFormatValues.Decimal)
                 },
-                LevelText = new LevelText()
+                LevelText = new LevelText
                 {
                     Val = "%1"
                 },
-                LevelJustification = new LevelJustification()
+                LevelJustification = new LevelJustification
                 {
                     Val = new EnumValue<LevelJustificationValues>(LevelJustificationValues.Left)
                 },
-                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position()
+                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position
                     {
                         Val = "0"
                     },
-                    new RightToLeftText()
+                    new RightToLeftText
                     {
                         Val = OnOffValue.FromBoolean(false)
                     }),
             },
-            new Level()
+            new Level
             {
                 LevelIndex = 1,
-                StartNumberingValue = new StartNumberingValue()
+                StartNumberingValue = new StartNumberingValue
                 {
                     Val = 1
                 },
-                NumberingFormat = new NumberingFormat()
+                NumberingFormat = new NumberingFormat
                 {
                     Val = new EnumValue<NumberFormatValues>(NumberFormatValues.Decimal)
                 },
-                LevelText = new LevelText()
+                LevelText = new LevelText
                 {
                     Val = "%1.%2"
-                }/*,
-                LevelJustification = new LevelJustification()
+                },
+                LevelJustification = new LevelJustification
                 {
                     Val = new EnumValue<LevelJustificationValues>(LevelJustificationValues.Left)
                 },
-                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position()
+                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position
                     {
                         Val = "0"
                     },
-                    new RightToLeftText()
+                    new RightToLeftText
                     {
                         Val = OnOffValue.FromBoolean(false)
-                    })*/
+                    })
             },
-            new Level()
+            new Level
             {
                 LevelIndex = 2,
-                StartNumberingValue = new StartNumberingValue()
+                StartNumberingValue = new StartNumberingValue
                 {
                     Val = 1
                 },
-                NumberingFormat = new NumberingFormat()
+                NumberingFormat = new NumberingFormat
                 {
                     Val = new EnumValue<NumberFormatValues>(NumberFormatValues.Decimal)
                 },
-                LevelText = new LevelText()
+                LevelText = new LevelText
                 {
                     Val = "%1.%2.%3"
-                },/*,
-                LevelJustification = new LevelJustification()
+                },
+                LevelJustification = new LevelJustification
                 {
                     Val = new EnumValue<LevelJustificationValues>(LevelJustificationValues.Left)
                 },
-                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position()
+                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position
                     {
                         Val = "0"
                     },
-                    new RightToLeftText()
+                    new RightToLeftText
                     {
                         Val = OnOffValue.FromBoolean(false)
-                    })*/
+                    })
             }
         ) {AbstractNumberId = lastAbstractNumber};
-        
+
         var paragraphNumberStyle0 = new Style
         {
             Type = StyleValues.Paragraph,
@@ -1097,7 +1093,6 @@ public class DocProcessHandler
             CustomStyle = true,
             SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
             StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
-            // AutoRedefine = new AutoRedefine {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
             StyleName = new StyleName {Val = "Numbering_x Lvl"},
             StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
                 {
@@ -1111,8 +1106,12 @@ public class DocProcessHandler
                 {
                     Val = 0
                 },
-                new Justification(){Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
-                new NumberingProperties(new NumberingId(){Val = lastNumNumber}, new NumberingLevelReference(){Val = 0})),
+                new Justification
+                    {Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
+                new NumberingProperties(new NumberingId
+                        {Val = lastNumNumber},
+                    new NumberingLevelReference
+                        {Val = 0})),
             StyleRunProperties = new StyleRunProperties(new Bold {Val = OnOffValue.FromBoolean(true)},
                 new BoldComplexScript {Val = OnOffValue.FromBoolean(true)},
                 new ItalicComplexScript {Val = OnOffValue.FromBoolean(true)},
@@ -1122,15 +1121,15 @@ public class DocProcessHandler
             UnhideWhenUsed = new UnhideWhenUsed {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
             // BasedOn = new BasedOn {Val = "phbase"},
             // NextParagraphStyle = new NextParagraphStyle {Val = "6"},
-            
-        };var paragraphNumberStyle1 = new Style
+        };
+
+        var paragraphNumberStyle1 = new Style
         {
             Type = StyleValues.Paragraph,
             StyleId = "Numbering_x_x",
             CustomStyle = true,
             SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
             StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
-            // AutoRedefine = new AutoRedefine {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
             StyleName = new StyleName {Val = "Numbering_x_x Lvl"},
             StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
                 {
@@ -1143,9 +1142,13 @@ public class DocProcessHandler
                 new OutlineLevel
                 {
                     Val = 1
-                }
-                ,new Justification(){Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
-                new NumberingProperties(new NumberingId(){Val = lastNumNumber}, new NumberingLevelReference(){Val = 1})),
+                },
+                new Justification
+                    {Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
+                new NumberingProperties(new NumberingId
+                        {Val = lastNumNumber},
+                    new NumberingLevelReference
+                        {Val = 1})),
             StyleRunProperties = new StyleRunProperties(new Bold {Val = OnOffValue.FromBoolean(true)},
                 new BoldComplexScript {Val = OnOffValue.FromBoolean(true)},
                 new ItalicComplexScript {Val = OnOffValue.FromBoolean(true)},
@@ -1155,15 +1158,15 @@ public class DocProcessHandler
             UnhideWhenUsed = new UnhideWhenUsed {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
             // BasedOn = new BasedOn {Val = "phbase"},
             // NextParagraphStyle = new NextParagraphStyle {Val = "6"},
-            
-        };var paragraphNumberStyle2 = new Style
+        };
+
+        var paragraphNumberStyle2 = new Style
         {
             Type = StyleValues.Paragraph,
             StyleId = "Numbering_x_x_x",
             CustomStyle = true,
             SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
             StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
-            // AutoRedefine = new AutoRedefine {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
             StyleName = new StyleName {Val = "Numbering_x_x_x Lvl"},
             StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
                 {
@@ -1176,9 +1179,13 @@ public class DocProcessHandler
                 new OutlineLevel
                 {
                     Val = 2
-                }
-                ,new Justification(){Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
-                new NumberingProperties(new NumberingId(){Val = lastNumNumber}, new NumberingLevelReference(){Val = 2})),
+                },
+                new Justification
+                    {Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
+                new NumberingProperties(new NumberingId
+                        {Val = lastNumNumber},
+                    new NumberingLevelReference
+                        {Val = 2})),
             StyleRunProperties = new StyleRunProperties(new Bold {Val = OnOffValue.FromBoolean(true)},
                 new BoldComplexScript {Val = OnOffValue.FromBoolean(true)},
                 new ItalicComplexScript {Val = OnOffValue.FromBoolean(true)},
@@ -1188,8 +1195,8 @@ public class DocProcessHandler
             UnhideWhenUsed = new UnhideWhenUsed {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
             // BasedOn = new BasedOn {Val = "phbase"},
             // NextParagraphStyle = new NextParagraphStyle {Val = "6"},
-            
         };
+
         if (lastAbstractNumber == 1)
         {
             numStyles.Append(abstractNumbering);
@@ -1207,9 +1214,8 @@ public class DocProcessHandler
         {
             numStyles.Elements<NumberingInstance>().Last().InsertAfterSelf(numberingInstance);
         }
-        #endregion
 
-        
+        #endregion
 
         styles?.AppendChild(plainTextStyle);
         styles?.AppendChild(blueTagStyle);
@@ -1360,7 +1366,7 @@ public class DocProcessHandler
 
         using var newDoc = GetNewWordDocument();
 
-        var (abstractNumId, numId) = InitStyles(newDoc);
+        InitStyles(newDoc);
 
         if (!string.IsNullOrEmpty(_entry.EtalonFolder) || !string.IsNullOrEmpty(_entry.TestFolder))
         {
@@ -1369,16 +1375,14 @@ public class DocProcessHandler
 
         if (!string.IsNullOrEmpty(_entry.TargetXsdFile))
         {
-            ExecuteInternalXsd(newDoc, abstractNumId, numId);
+            ExecuteInternalXsd(newDoc);
         }
 
         var openXmlValidator = new OpenXmlValidator(FileFormatVersions.Office2010);
         var errors = openXmlValidator.Validate(newDoc);
 
         if (errors.Any())
-        {
-            
-        }
+        { }
 
         if (!newDoc.AutoSave)
         {
