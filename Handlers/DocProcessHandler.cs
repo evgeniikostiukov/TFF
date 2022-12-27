@@ -11,6 +11,7 @@ using System.Xml.Linq;
 using System.Xml.Schema;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Validation;
 using DocumentFormat.OpenXml.Wordprocessing;
 using tff.main.Extensions;
 using tff.main.Models;
@@ -93,7 +94,7 @@ public class DocProcessHandler
 
     #region XSD
 
-    private void ExecuteInternalXsd(WordprocessingDocument newDoc)
+    private void ExecuteInternalXsd(WordprocessingDocument newDoc, int abstractNumId, int numId)
     {
         using var fs = new FileStream(_entry.TargetXsdFile, FileMode.Open);
 
@@ -122,7 +123,7 @@ public class DocProcessHandler
                 _entry.Progress = 0;
 
                 nextElement = newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
-                    _xsdPattern.IsMatch(x.InnerText)
+                    _xsdPattern.IsMatch(x.InnerText) && !_xsdVersionPattern.IsMatch(x.InnerText)
                 );
 
                 if (nextElement == null)
@@ -150,8 +151,8 @@ public class DocProcessHandler
                 paragraphsWithHyperlink,
                 xsdDescriptionsElements.Where(x => x.Parent == null).ToArray(),
                 1,
-                2,
-                5,
+                "Numbering_x_x",
+                numId,
                 ref counter
             );
 
@@ -159,8 +160,9 @@ public class DocProcessHandler
                 "Описание комплексных типов полей (при наличии)",
                 "4.3",
                 1,
-                2,
-                5
+                "Numbering_x_x",
+                // 2,
+                numId
             );
 
             //комплексные типы
@@ -168,9 +170,9 @@ public class DocProcessHandler
                 allElements,
                 paragraphsWithHyperlink,
                 xsdDescriptionsComplexes.Where(x => x.Parent == null).ToArray(),
-                0,
-                30,
-                10,
+                2,
+                "Numbering_x_x_x",
+                numId,
                 ref counter
             );
 
@@ -203,9 +205,9 @@ public class DocProcessHandler
 
         SetNamespaceUrn(namespaceUrnArray);
 
-        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.FirstOrDefault(x =>
+        SetVersion(newDoc.MainDocumentPart?.Document.Body?.ChildElements.Where(x =>
                 PatternMatch(_versionPattern, x.InnerText)
-            ),
+            ).ToArray(),
             GetVersion()
         );
 
@@ -228,45 +230,48 @@ public class DocProcessHandler
 
         var neighbourElement = p.ChildElements.FirstOrDefault(x => PatternMatch(_xsdVersionPattern, x.InnerText));
 
-        neighbourElement?.Remove();
         var run = new Run(new Text(version));
         neighbourElement?.InsertAfterSelf(run);
+        neighbourElement?.Remove();
     }
 
-    private void SetVersion(OpenXmlElement element, string version)
+    private void SetVersion(OpenXmlElement[] elements, string version)
     {
-        if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
+        foreach (var element in elements)
         {
-            return;
-        }
-
-        p.RemoveAllChildren<Run>();
-
-        var run = new Run(new Text($"Версия: {version}"));
-
-        run.RunProperties ??= new RunProperties
-        {
-            Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
-            FontSize = new FontSize
+            if (element is not Paragraph p || string.IsNullOrWhiteSpace(version))
             {
-                Val = "24",
-            },
-            RunFonts = new RunFonts
-            {
-                Ascii = "Times New Roman",
-                ComplexScript = "Times New Roman",
-                EastAsia = "Times New Roman",
-                HighAnsi = "Times New Roman",
-            },
-        };
+                return;
+            }
 
-        p.Append(run,
-            new Run(new Break
+            p.RemoveAllChildren<Run>();
+
+            var run = new Run(new Text($"Версия: {version}"));
+
+            run.RunProperties ??= new RunProperties
+            {
+                Bold = new Bold {Val = OnOffValue.FromBoolean(true)},
+                FontSize = new FontSize
                 {
-                    Type = new EnumValue<BreakValues>(BreakValues.Page),
-                }
-            )
-        );
+                    Val = "24",
+                },
+                RunFonts = new RunFonts
+                {
+                    Ascii = "Times New Roman",
+                    ComplexScript = "Times New Roman",
+                    EastAsia = "Times New Roman",
+                    HighAnsi = "Times New Roman",
+                },
+            };
+
+            p.Append(run,
+                new Run(new Break
+                    {
+                        Type = new EnumValue<BreakValues>(BreakValues.Page),
+                    }
+                )
+            );
+        }
     }
 
     private void SetNamespaceUrn(OpenXmlElement[] elements)
@@ -317,7 +322,7 @@ public class DocProcessHandler
         List<KeyValuePair<Paragraph, XsdDescription>> paragraphsWithHyperlink,
         XsdDescription[] elements,
         int level,
-        int styleId,
+        string styleId,
         int numId,
         ref int progress)
     {
@@ -345,6 +350,8 @@ public class DocProcessHandler
                 xsdDescription.Number,
                 level,
                 styleId,
+                // numId
+                // styleId,
                 numId
             );
 
@@ -856,9 +863,10 @@ public class DocProcessHandler
         paragraph?.Append(run);
     }
 
-    private void InitStyles(WordprocessingDocument newDoc)
+    private (int, int) InitStyles(WordprocessingDocument newDoc)
     {
         var part = newDoc?.MainDocumentPart?.StyleDefinitionsPart;
+        var numPart = newDoc?.MainDocumentPart?.NumberingDefinitionsPart;
 
         if (part == null)
         {
@@ -866,14 +874,28 @@ public class DocProcessHandler
 
             if (part == null)
             {
-                return;
+                return (-1,-1);
             }
 
             var root = new Styles();
             root.Save(part);
         }
+        
+        if (numPart == null)
+        {
+            numPart = newDoc?.MainDocumentPart?.AddNewPart<NumberingDefinitionsPart>();
+
+            if (numPart == null)
+            {
+                return(-1,-1);
+            }
+
+            var root = new Numbering();
+            root.Save(numPart);
+        }
 
         var styles = part.Styles;
+        var numStyles = numPart.Numbering;
 
         #region bluetag
 
@@ -970,8 +992,233 @@ public class DocProcessHandler
 
         #endregion
 
+        #region Numbering 4
+
+        var lastAbstractNumber = numStyles.Elements<AbstractNum>().Count() + 1;
+        
+        var lastNumNumber = numStyles.Elements<NumberingInstance>().Count() + 1;
+
+        var numberingInstance = new NumberingInstance(new AbstractNumId() {Val = lastAbstractNumber}) {NumberID = lastNumNumber};
+
+        var abstractNumbering = new AbstractNum(
+            new MultiLevelType()
+            {
+                Val = new EnumValue<MultiLevelValues>(MultiLevelValues.Multilevel)
+            },
+            new Level()
+            {
+                LevelIndex = 0,
+                StartNumberingValue = new StartNumberingValue()
+                {
+                    Val = 4
+                },
+                NumberingFormat = new NumberingFormat()
+                {
+                    Val = new EnumValue<NumberFormatValues>(NumberFormatValues.Decimal)
+                },
+                LevelText = new LevelText()
+                {
+                    Val = "%1"
+                },
+                LevelJustification = new LevelJustification()
+                {
+                    Val = new EnumValue<LevelJustificationValues>(LevelJustificationValues.Left)
+                },
+                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position()
+                    {
+                        Val = "0"
+                    },
+                    new RightToLeftText()
+                    {
+                        Val = OnOffValue.FromBoolean(false)
+                    }),
+            },
+            new Level()
+            {
+                LevelIndex = 1,
+                StartNumberingValue = new StartNumberingValue()
+                {
+                    Val = 1
+                },
+                NumberingFormat = new NumberingFormat()
+                {
+                    Val = new EnumValue<NumberFormatValues>(NumberFormatValues.Decimal)
+                },
+                LevelText = new LevelText()
+                {
+                    Val = "%1.%2"
+                }/*,
+                LevelJustification = new LevelJustification()
+                {
+                    Val = new EnumValue<LevelJustificationValues>(LevelJustificationValues.Left)
+                },
+                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position()
+                    {
+                        Val = "0"
+                    },
+                    new RightToLeftText()
+                    {
+                        Val = OnOffValue.FromBoolean(false)
+                    })*/
+            },
+            new Level()
+            {
+                LevelIndex = 2,
+                StartNumberingValue = new StartNumberingValue()
+                {
+                    Val = 1
+                },
+                NumberingFormat = new NumberingFormat()
+                {
+                    Val = new EnumValue<NumberFormatValues>(NumberFormatValues.Decimal)
+                },
+                LevelText = new LevelText()
+                {
+                    Val = "%1.%2.%3"
+                },/*,
+                LevelJustification = new LevelJustification()
+                {
+                    Val = new EnumValue<LevelJustificationValues>(LevelJustificationValues.Left)
+                },
+                NumberingSymbolRunProperties = new NumberingSymbolRunProperties(new Position()
+                    {
+                        Val = "0"
+                    },
+                    new RightToLeftText()
+                    {
+                        Val = OnOffValue.FromBoolean(false)
+                    })*/
+            }
+        ) {AbstractNumberId = lastAbstractNumber};
+        
+        var paragraphNumberStyle0 = new Style
+        {
+            Type = StyleValues.Paragraph,
+            StyleId = "Numbering_x",
+            CustomStyle = true,
+            SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
+            StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
+            // AutoRedefine = new AutoRedefine {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            StyleName = new StyleName {Val = "Numbering_x Lvl"},
+            StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
+                {
+                    Val = OnOffValue.FromBoolean(true)
+                },
+                new Spacing
+                {
+                    Val = 240
+                },
+                new OutlineLevel
+                {
+                    Val = 0
+                },
+                new Justification(){Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
+                new NumberingProperties(new NumberingId(){Val = lastNumNumber}, new NumberingLevelReference(){Val = 0})),
+            StyleRunProperties = new StyleRunProperties(new Bold {Val = OnOffValue.FromBoolean(true)},
+                new BoldComplexScript {Val = OnOffValue.FromBoolean(true)},
+                new ItalicComplexScript {Val = OnOffValue.FromBoolean(true)},
+                new FontSize {Val = "24"},
+                new FontSizeComplexScript {Val = "26"}),
+            PrimaryStyle = new PrimaryStyle {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            UnhideWhenUsed = new UnhideWhenUsed {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            // BasedOn = new BasedOn {Val = "phbase"},
+            // NextParagraphStyle = new NextParagraphStyle {Val = "6"},
+            
+        };var paragraphNumberStyle1 = new Style
+        {
+            Type = StyleValues.Paragraph,
+            StyleId = "Numbering_x_x",
+            CustomStyle = true,
+            SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
+            StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
+            // AutoRedefine = new AutoRedefine {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            StyleName = new StyleName {Val = "Numbering_x_x Lvl"},
+            StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
+                {
+                    Val = OnOffValue.FromBoolean(true)
+                },
+                new Spacing
+                {
+                    Val = 240
+                },
+                new OutlineLevel
+                {
+                    Val = 1
+                }
+                ,new Justification(){Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
+                new NumberingProperties(new NumberingId(){Val = lastNumNumber}, new NumberingLevelReference(){Val = 1})),
+            StyleRunProperties = new StyleRunProperties(new Bold {Val = OnOffValue.FromBoolean(true)},
+                new BoldComplexScript {Val = OnOffValue.FromBoolean(true)},
+                new ItalicComplexScript {Val = OnOffValue.FromBoolean(true)},
+                new FontSize {Val = "24"},
+                new FontSizeComplexScript {Val = "26"}),
+            PrimaryStyle = new PrimaryStyle {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            UnhideWhenUsed = new UnhideWhenUsed {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            // BasedOn = new BasedOn {Val = "phbase"},
+            // NextParagraphStyle = new NextParagraphStyle {Val = "6"},
+            
+        };var paragraphNumberStyle2 = new Style
+        {
+            Type = StyleValues.Paragraph,
+            StyleId = "Numbering_x_x_x",
+            CustomStyle = true,
+            SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
+            StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
+            // AutoRedefine = new AutoRedefine {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            StyleName = new StyleName {Val = "Numbering_x_x_x Lvl"},
+            StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
+                {
+                    Val = OnOffValue.FromBoolean(true)
+                },
+                new Spacing
+                {
+                    Val = 240
+                },
+                new OutlineLevel
+                {
+                    Val = 2
+                }
+                ,new Justification(){Val = new EnumValue<JustificationValues>(JustificationValues.Both)},
+                new NumberingProperties(new NumberingId(){Val = lastNumNumber}, new NumberingLevelReference(){Val = 2})),
+            StyleRunProperties = new StyleRunProperties(new Bold {Val = OnOffValue.FromBoolean(true)},
+                new BoldComplexScript {Val = OnOffValue.FromBoolean(true)},
+                new ItalicComplexScript {Val = OnOffValue.FromBoolean(true)},
+                new FontSize {Val = "24"},
+                new FontSizeComplexScript {Val = "26"}),
+            PrimaryStyle = new PrimaryStyle {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            UnhideWhenUsed = new UnhideWhenUsed {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.On)},
+            // BasedOn = new BasedOn {Val = "phbase"},
+            // NextParagraphStyle = new NextParagraphStyle {Val = "6"},
+            
+        };
+        if (lastAbstractNumber == 1)
+        {
+            numStyles.Append(abstractNumbering);
+        }
+        else
+        {
+            numStyles.Elements<AbstractNum>().Last().InsertAfterSelf(abstractNumbering);
+        }
+
+        if (lastNumNumber == 1)
+        {
+            numStyles.Append(numberingInstance);
+        }
+        else
+        {
+            numStyles.Elements<NumberingInstance>().Last().InsertAfterSelf(numberingInstance);
+        }
+        #endregion
+
+        
+
         styles?.AppendChild(plainTextStyle);
         styles?.AppendChild(blueTagStyle);
+        styles?.AppendChild(paragraphNumberStyle0);
+        styles?.AppendChild(paragraphNumberStyle1);
+        styles?.AppendChild(paragraphNumberStyle2);
+
+        return (lastAbstractNumber, lastNumNumber);
     }
 
     private void SetXml(Paragraph p, IEnumerable<XElement> elements, int level, bool localName = true)
@@ -1114,7 +1361,7 @@ public class DocProcessHandler
 
         using var newDoc = GetNewWordDocument();
 
-        InitStyles(newDoc);
+        var (abstractNumId, numId) = InitStyles(newDoc);
 
         if (!string.IsNullOrEmpty(_entry.EtalonFolder) || !string.IsNullOrEmpty(_entry.TestFolder))
         {
@@ -1123,7 +1370,15 @@ public class DocProcessHandler
 
         if (!string.IsNullOrEmpty(_entry.TargetXsdFile))
         {
-            ExecuteInternalXsd(newDoc);
+            ExecuteInternalXsd(newDoc, abstractNumId, numId);
+        }
+
+        var openXmlValidator = new OpenXmlValidator(FileFormatVersions.Office2010);
+        var errors = openXmlValidator.Validate(newDoc);
+
+        if (errors.Any())
+        {
+            
         }
 
         if (!newDoc.AutoSave)
@@ -1135,6 +1390,7 @@ public class DocProcessHandler
     private WordprocessingDocument GetNewWordDocument()
     {
         var fileInfo = new FileInfo(_entry.TargetFile ?? throw new InvalidOperationException());
+
         var newFilePath =
             $"{_entry.SavePath}\\Готовый_{DateTime.Now.ToString("yyyy'_'MM'_'dd'-'HH'_'mm'_'ss")}_{fileInfo.Name.Split(".")[0]}{fileInfo.Extension}";
 

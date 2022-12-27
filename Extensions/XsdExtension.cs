@@ -345,7 +345,8 @@ public static class XsdExtension
         string title,
         string number,
         int level,
-        int styleId,
+        string styleId,
+        // int styleId,
         int numId)
     {
         var text = new Text();
@@ -354,7 +355,8 @@ public static class XsdExtension
 
         var parStyle = new ParagraphStyleId
         {
-            Val = $"{styleId}",
+            // Val = styleId,
+            Val = styleId,
         };
 
         paragraph.ParagraphProperties = new ParagraphProperties
