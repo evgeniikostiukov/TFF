@@ -151,8 +151,8 @@ public class DocProcessHandler
                 paragraphsWithHyperlink,
                 xsdDescriptionsElements.Where(x => x.Parent == null).ToArray(),
                 1,
-                "Numbering_x_x",
-                numId,
+                2,
+                5,
                 ref counter
             );
 
@@ -160,9 +160,8 @@ public class DocProcessHandler
                 "Описание комплексных типов полей (при наличии)",
                 "4.3",
                 1,
-                "Numbering_x_x",
-                // 2,
-                numId
+                2,
+                5
             );
 
             //комплексные типы
@@ -170,9 +169,9 @@ public class DocProcessHandler
                 allElements,
                 paragraphsWithHyperlink,
                 xsdDescriptionsComplexes.Where(x => x.Parent == null).ToArray(),
-                2,
-                "Numbering_x_x_x",
-                numId,
+                0,
+                30,
+                10,
                 ref counter
             );
 
@@ -322,7 +321,7 @@ public class DocProcessHandler
         List<KeyValuePair<Paragraph, XsdDescription>> paragraphsWithHyperlink,
         XsdDescription[] elements,
         int level,
-        string styleId,
+        int styleId,
         int numId,
         ref int progress)
     {
