@@ -94,7 +94,7 @@ public class DocProcessHandler
 
     #region XSD
 
-    private void ExecuteInternalXsd(WordprocessingDocument newDoc)
+    private void ExecuteInternalXsd(WordprocessingDocument newDoc, int numId)
     {
         using var fs = new FileStream(_entry.TargetXsdFile, FileMode.Open);
 
@@ -151,7 +151,7 @@ public class DocProcessHandler
                 paragraphsWithHyperlink,
                 xsdDescriptionsElements.Where(x => x.Parent == null).ToArray(),
                 1,
-                2,
+                "2",
                 5,
                 ref counter
             );
@@ -160,7 +160,7 @@ public class DocProcessHandler
                 "Описание комплексных типов полей (при наличии)",
                 "4.3",
                 1,
-                2,
+                "2",
                 5
             );
 
@@ -169,9 +169,9 @@ public class DocProcessHandler
                 allElements,
                 paragraphsWithHyperlink,
                 xsdDescriptionsComplexes.Where(x => x.Parent == null).ToArray(),
-                0,
-                30,
-                10,
+                2,
+                "Numbering_4_3_x",
+                numId,
                 ref counter
             );
 
@@ -321,7 +321,7 @@ public class DocProcessHandler
         List<KeyValuePair<Paragraph, XsdDescription>> paragraphsWithHyperlink,
         XsdDescription[] elements,
         int level,
-        int styleId,
+        string styleId,
         int numId,
         ref int progress)
     {
@@ -1041,7 +1041,7 @@ public class DocProcessHandler
                 },
                 LevelText = new LevelText
                 {
-                    Val = "%1.%2"
+                    Val = "4.%2"
                 },
                 LevelJustification = new LevelJustification
                 {
@@ -1069,7 +1069,7 @@ public class DocProcessHandler
                 },
                 LevelText = new LevelText
                 {
-                    Val = "%1.%2.%3"
+                    Val = "4.3.%3"
                 },
                 LevelJustification = new LevelJustification
                 {
@@ -1089,11 +1089,11 @@ public class DocProcessHandler
         var paragraphNumberStyle0 = new Style
         {
             Type = StyleValues.Paragraph,
-            StyleId = "Numbering_x",
+            StyleId = "Numbering_4",
             CustomStyle = true,
             SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
             StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
-            StyleName = new StyleName {Val = "Numbering_x Lvl"},
+            StyleName = new StyleName {Val = "Numbering_4 Lvl"},
             StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
                 {
                     Val = OnOffValue.FromBoolean(true)
@@ -1126,11 +1126,11 @@ public class DocProcessHandler
         var paragraphNumberStyle1 = new Style
         {
             Type = StyleValues.Paragraph,
-            StyleId = "Numbering_x_x",
+            StyleId = "Numbering_4_x",
             CustomStyle = true,
             SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
             StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
-            StyleName = new StyleName {Val = "Numbering_x_x Lvl"},
+            StyleName = new StyleName {Val = "Numbering_4_x Lvl"},
             StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
                 {
                     Val = OnOffValue.FromBoolean(true)
@@ -1163,11 +1163,11 @@ public class DocProcessHandler
         var paragraphNumberStyle2 = new Style
         {
             Type = StyleValues.Paragraph,
-            StyleId = "Numbering_x_x_x",
+            StyleId = "Numbering_4_3_x",
             CustomStyle = true,
             SemiHidden = new SemiHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
             StyleHidden = new StyleHidden {Val = new EnumValue<OnOffOnlyValues>(OnOffOnlyValues.Off)},
-            StyleName = new StyleName {Val = "Numbering_x_x_x Lvl"},
+            StyleName = new StyleName {Val = "Numbering_4_3_x Lvl"},
             StyleParagraphProperties = new StyleParagraphProperties(new KeepNext
                 {
                     Val = OnOffValue.FromBoolean(true)
@@ -1366,7 +1366,7 @@ public class DocProcessHandler
 
         using var newDoc = GetNewWordDocument();
 
-        InitStyles(newDoc);
+        var (_, numberId) = InitStyles(newDoc);
 
         if (!string.IsNullOrEmpty(_entry.EtalonFolder) || !string.IsNullOrEmpty(_entry.TestFolder))
         {
@@ -1375,14 +1375,8 @@ public class DocProcessHandler
 
         if (!string.IsNullOrEmpty(_entry.TargetXsdFile))
         {
-            ExecuteInternalXsd(newDoc);
+            ExecuteInternalXsd(newDoc, numberId);
         }
-
-        var openXmlValidator = new OpenXmlValidator(FileFormatVersions.Office2010);
-        var errors = openXmlValidator.Validate(newDoc);
-
-        if (errors.Any())
-        { }
 
         if (!newDoc.AutoSave)
         {
