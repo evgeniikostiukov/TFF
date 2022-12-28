@@ -618,7 +618,7 @@ public class DocProcessHandler
                     {
                         var subStringLength = annotation.IndexOf('\n');
 
-                        comment = annotation.Remove(0, subStringLength).Trim(' ', '\n');
+                        comment = annotation.Remove(0, subStringLength);
 
                         annotation = annotation[..subStringLength].Trim('\n');
                     }
@@ -651,6 +651,7 @@ public class DocProcessHandler
                             if (isComplex)
                             {
                                 annotation = XsdExtension.GetAnnotation(complexType);
+                                xsdEntity.Annotation = annotation;
                             }
 
                             if (string.IsNullOrEmpty(annotation))
@@ -670,13 +671,7 @@ public class DocProcessHandler
                                 ? isComplex ? "Комплексный элемент" : "Составной элемент"
                                 : type;
 
-                            if (!isComplex)
-                            {
-                                annotation = annotation + '\n' + comment;
-                            }
-
                             xsdEntity.Number = $"4.3.{counter}";
-                            xsdEntity.Annotation = annotation;
 
                             WalkChildNodes(string.IsNullOrEmpty(annotation) ? parent : xsdEntity,
                                 complexType.Particle,
@@ -1269,7 +1264,7 @@ public class DocProcessHandler
 
                 for (var i = 0; i < innerTextArray.Length; i++)
                 {
-                    var textPart = TrimAllChars(innerTextArray[i], ' ', '\r', '\n');
+                    var textPart = XsdExtension.TrimAllChars(innerTextArray[i], ' ', '\r', '\n');
                     newtext = new Text();
                     newrun = new Run();
                     runProp = newrun.RunProperties ?? (newrun.RunProperties = new RunProperties());
@@ -1325,20 +1320,6 @@ public class DocProcessHandler
     }
 
     #endregion
-
-    private string TrimAllChars(string text, params char[] replacedChars)
-    {
-        foreach (var replacedChar in replacedChars)
-        {
-            if (text.StartsWith(replacedChar) || text.EndsWith(replacedChar))
-            {
-                text = text.Trim(replacedChar);
-                TrimAllChars(text, replacedChar);
-            }
-        }
-
-        return text;
-    }
 
     #region Worker
 

@@ -302,8 +302,8 @@ public static class XsdExtension
         tablePara6.AddElementChild(tableRun6);
 
         if (!string.IsNullOrEmpty(xsdDescription.TypeOrFillMethod)
-         && xsdDescription.Parent != null
-         && !xsdDescription.TypeOrFillMethod.StartsWith("xs:"))
+            && xsdDescription.Parent != null
+            && !xsdDescription.TypeOrFillMethod.StartsWith("xs:"))
         {
             var (fieldName, _) = GetFieldNameAndMethod(xsdDescription);
 
@@ -449,26 +449,35 @@ public static class XsdExtension
 
     private static void SetRunTextWithNewLines(this Run run, string text)
     {
-        var newLineArray = new[] {Environment.NewLine, "\n", "\r\n", "\n\r",};
-        var textArray = text.Split(newLineArray, StringSplitOptions.None);
         var first = true;
 
-        foreach (var line in textArray)
+        foreach (var textPart in text.Split("\n\n"))
         {
-            if (!first)
+            var textPartTmpl = TrimAllChars(textPart, ' ', '\n', '\r', '\t');
+            var newLineArray = new[] {Environment.NewLine, "\n", "\r\n", "\n\r",};
+            var textArray = textPartTmpl.Split(newLineArray, StringSplitOptions.None);
+
+            foreach (var line in textArray)
             {
-                run.Append(new Break());
+                var lineTmpl = TrimAllChars(line, ' ', '\n', '\r', '\t');
+
+                if (!first)
+                {
+                    run.Append(new Break());
+                }
+
+                first = false;
+
+                var txt = new Text
+                {
+                    Text = lineTmpl,
+                    Space = SpaceProcessingModeValues.Default,
+                };
+
+                run.Append(txt);
             }
 
-            first = false;
-
-            var txt = new Text
-            {
-                Text = line,
-                Space = SpaceProcessingModeValues.Preserve,
-            };
-
-            run.Append(txt);
+            run.Append(new Break());
         }
     }
 
@@ -492,7 +501,7 @@ public static class XsdExtension
                 continue;
             }
 
-            element.Comment = $"{method} атрибут(см. описание в пункте ";
+            element.Comment += $"{(element.Comment.Trim().Length > 0 ? "\n\n" : "")}{method} атрибут(см. описание в пункте ";
         }
     }
 
@@ -511,7 +520,12 @@ public static class XsdExtension
     public static string GetAnnotation(XmlSchemaAnnotated schemaObject)
     {
         var documentationTag = schemaObject.Annotation?.Items[0] as XmlSchemaDocumentation;
-        var markup = documentationTag?.Markup?.Length > 0 ? documentationTag.Markup[0]?.Value?.TrimEnd(':') : string.Empty;
+
+        var markup = TrimAllChars(documentationTag?.Markup?.Length > 0 ? documentationTag.Markup[0]?.Value?.TrimEnd(':') : string.Empty,
+            ' ',
+            '\n',
+            '\r',
+            '\t');
 
         return markup;
     }
@@ -536,5 +550,19 @@ public static class XsdExtension
         }
 
         return (fieldName, method);
+    }
+
+    public static string TrimAllChars(string text, params char[] replacedChars)
+    {
+        foreach (var replacedChar in replacedChars)
+        {
+            if (text.StartsWith(replacedChar) || text.EndsWith(replacedChar))
+            {
+                text = text.Trim(replacedChar);
+                TrimAllChars(text, replacedChar);
+            }
+        }
+
+        return text;
     }
 }
